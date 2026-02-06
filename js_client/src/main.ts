@@ -41,8 +41,7 @@ function getPlayerId() {
 
             console.log('[SendSpin] Creating player with token:', !!token);
 
-            // @ts-ignore - SendspinPlayer config types may not include all runtime properties
-            player = new SendspinPlayer({
+            const playerConfig: any = {
                 playerId: playerId,
                 baseUrl: proxyBase,
                 clientName: 'Home Assistant Browser',
@@ -70,7 +69,9 @@ function getPlayerId() {
                 onDisconnected: (reason?: string) => {
                     console.log('[SendSpin] Disconnected:', reason);
                 },
-            });
+            };
+
+            player = new SendspinPlayer(playerConfig);
 
             // Handle Audio Context Unlocking (required for audio playback)
             const unlockAudio = () => {
