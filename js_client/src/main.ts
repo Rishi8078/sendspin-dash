@@ -485,48 +485,85 @@ declare global {
     console.log('[SendSpin] Exposed window.sendspinPlayer and window.SendSpinPlayerManager');
 
     /**
-     * Auto-connect if configuration is available
-     * Fetches Music Assistant URL from Home Assistant integration
+     * Get the Home Assistant `hass` object from the frontend.
+     * This is the same pattern browser_mod uses via provideHass / selectTree.
+     * The hass object contains the authenticated connection and auth token.
+     */
+    function getHassObject(): any | null {
+        try {
+            // The <home-assistant> element holds the hass object
+            const ha = document.querySelector('home-assistant') as any;
+            if (ha?.hass) {
+                return ha.hass;
+            }
+            // Fallback: check shadow root
+            const haMain = ha?.shadowRoot?.querySelector('home-assistant-main') as any;
+            if (haMain?.hass) {
+                return haMain.hass;
+            }
+        } catch (e) {
+            console.warn('[SendSpin] Could not access hass object:', e);
+        }
+        return null;
+    }
+
+    /**
+     * Wait for the hass object to become available.
+     * The HA frontend loads asynchronously, so we poll until ready.
+     */
+    async function waitForHass(maxWaitMs = 15000): Promise<any | null> {
+        const start = Date.now();
+        while (Date.now() - start < maxWaitMs) {
+            const hass = getHassObject();
+            if (hass?.auth?.data?.access_token) {
+                console.log('[SendSpin] Got hass object with auth token');
+                return hass;
+            }
+            await new Promise(r => setTimeout(r, 250));
+        }
+        console.warn('[SendSpin] Timed out waiting for hass object');
+        return null;
+    }
+
+    /**
+     * Auto-connect if configuration is available.
+     * Gets the auth token from the HA frontend (like browser_mod does),
+     * then fetches config from our integration endpoint.
      */
     async function autoConnect() {
         try {
+            // Wait for HA frontend to be ready and get authenticated hass object
+            const hass = await waitForHass();
+            
+            if (!hass) {
+                console.error('[SendSpin] Home Assistant frontend not available - cannot authenticate');
+                return;
+            }
+
+            // Get the access token from the hass auth object
+            const accessToken = hass.auth?.data?.access_token;
+            if (!accessToken) {
+                console.error('[SendSpin] No access token available from HA frontend');
+                return;
+            }
+
+            console.log('[SendSpin] Using HA frontend auth token for API request');
+
             const configUrl = window.location.origin + '/api/sendspin_player/config';
             console.log('[SendSpin] Fetching config from:', configUrl);
 
-            // Prepare fetch options with authentication
-            const fetchOptions: RequestInit = {
+            const configReq = await fetch(configUrl, {
                 method: 'GET',
                 headers: {
+                    'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json',
                 },
-                credentials: 'include', // Include cookies for session auth
-            };
-
-            // If running in Home Assistant, try to get the auth token
-            // Home Assistant stores auth in sessionStorage under 'hassAuthToken'
-            const authToken = (window as any).hassAuthToken || 
-                              sessionStorage.getItem('hassAuthToken') ||
-                              localStorage.getItem('hassAuthToken');
-            
-            if (authToken) {
-                console.log('[SendSpin] Auth token found, adding to request');
-                fetchOptions.headers = {
-                    ...fetchOptions.headers,
-                    'Authorization': `Bearer ${authToken}`,
-                };
-            } else {
-                console.warn('[SendSpin] No auth token found - relying on session cookies');
-            }
-
-            const configReq = await fetch(configUrl, fetchOptions);
+            });
 
             if (!configReq.ok) {
                 console.error(
-                    `[SendSpin] Config fetch failed: ${configReq.status} ${configReq.statusText}`,
-                    configReq
+                    `[SendSpin] Config fetch failed: ${configReq.status} ${configReq.statusText}`
                 );
-                
-                // Log response text for debugging
                 try {
                     const respText = await configReq.text();
                     console.debug('[SendSpin] Response body:', respText);
