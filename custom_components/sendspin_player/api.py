@@ -2,9 +2,8 @@
 import logging
 import aiohttp
 
-from homeassistant.components.http import HomeAssistantView
+from homeassistant.helpers.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.typing import HomeAssistantType
 
 from .const import DOMAIN, CONF_MA_URL, CONF_MA_TOKEN
 
@@ -16,12 +15,12 @@ class SendSpinConfigView(HomeAssistantView):
     The frontend connects DIRECTLY to Music Assistant using this configuration.
     No proxy is needed - the browser makes a direct WebSocket connection to MA.
     
-    Authentication is required - must be authenticated user or have valid token.
+    Authentication is required - only authenticated users can access this endpoint.
     """
 
     url = "/api/sendspin_player/config"
     name = "api:sendspin_player:config"
-    requires_auth = True  # Requires authentication (user or token)
+    requires_auth = True  # Framework-level authentication (requires logged-in user or token)
 
     def __init__(self, hass: HomeAssistant):
         """Initialize."""
@@ -31,26 +30,12 @@ class SendSpinConfigView(HomeAssistantView):
         """Return the Music Assistant configuration for the browser player.
         
         Only accessible to authenticated users or with valid long-lived access token.
+        The requires_auth = True attribute ensures framework-level authentication.
         
         Returns:
             JSON with ma_url and token (if configured) so the browser can
             connect directly to Music Assistant.
         """
-        # Verify authentication
-        # Note: requires_auth = True already ensures authentication at framework level
-        # but we can add additional validation if needed
-        
-        user = request.app.get("hass_user")
-        if not user and not request.get("hass_token_id"):
-            _LOGGER.warning(
-                "Unauthorized access attempt to /api/sendspin_player/config from %s",
-                request.remote
-            )
-            return aiohttp.web.json_response(
-                {"error": "Unauthorized"}, 
-                status=401
-            )
-        
         # Find the loaded config entry
         entries = self.hass.config_entries.async_entries(DOMAIN)
         if not entries:
@@ -68,8 +53,11 @@ class SendSpinConfigView(HomeAssistantView):
                 status=400
             )
         
+        # Log access for debugging
+        user = request.get("hass_user")
+        user_name = user.name if user else "token"
         _LOGGER.debug(
-            f"SendSpin config accessed by user {user.name if user else 'token'}: "
+            f"SendSpin config accessed by {user_name}: "
             f"MA URL={ma_url}, has_token={bool(token)}"
         )
         
