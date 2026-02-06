@@ -30,11 +30,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     component_dir = Path(__file__).parent
     frontend_dir = component_dir / "frontend"
     
-    hass.http.register_static_path(
-        "/sendspin_player_static",
-        str(frontend_dir),
-        cache_headers=False # Useful for dev
-    )
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(
+            url_path="/sendspin_player_static",
+            path=str(frontend_dir),
+            cache_headers=False
+        )
+    ])
     
     # 3. Inject the script into Lovelace
     # This ensures the player starts on every dashboard
