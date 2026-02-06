@@ -11,24 +11,21 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import DOMAIN, CONF_MA_URL, CONF_MA_TOKEN
+from .const import DOMAIN, CONF_SERVER_URL
 
 _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_MA_URL): str,
-        vol.Optional(CONF_MA_TOKEN): str,
+        vol.Required(CONF_SERVER_URL, description={"suggested_value": "http://homeassistant.local:8095"}): str,
     }
 )
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
-    """Validate the user input allows us to connect."""
-    # TODO: Implement actual connection test to MA
-    url = data[CONF_MA_URL]
+    """Validate the user input."""
+    url = data[CONF_SERVER_URL]
     if not url.startswith("http"):
         raise InvalidURL
-    
     return {"title": "SendSpin Player"}
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -46,7 +43,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 info = await validate_input(self.hass, user_input)
             except InvalidURL:
                 errors["base"] = "invalid_url"
-            except Exception:  # pylint: disable=broad-except
+            except Exception:
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:

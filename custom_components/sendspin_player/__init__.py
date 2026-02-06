@@ -1,7 +1,10 @@
 """The SendSpin Player integration.
 
-Uses WebSocket API for config delivery (like browser_mod).
-The HA frontend WebSocket is already authenticated — no REST/Bearer needed.
+Delivers the Sendspin server URL to the browser frontend via WebSocket.
+The browser then connects directly to the Sendspin server (e.g. Music Assistant)
+using the sendspin-js SDK over a separate WebSocket at ws://server:port/sendspin.
+
+No auth token is needed — Sendspin is a local LAN protocol.
 """
 import logging
 from pathlib import Path
@@ -14,7 +17,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.frontend import add_extra_js_url
 
-from .const import DOMAIN, CONF_MA_URL, CONF_MA_TOKEN, WS_GET_CONFIG
+from .const import DOMAIN, CONF_SERVER_URL, WS_GET_CONFIG
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,12 +28,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up SendSpin Player from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
-        "ma_url": entry.data.get(CONF_MA_URL),
-        "ma_token": entry.data.get(CONF_MA_TOKEN),
+        "server_url": entry.data.get(CONF_SERVER_URL),
     }
 
-    # 1. Register WebSocket command for config
-    # The frontend calls this over the already-authenticated WS connection
+    # 1. Register WebSocket command for config delivery
     websocket_api.async_register_command(hass, ws_get_config)
     _LOGGER.info("SendSpin: registered websocket command %s", WS_GET_CONFIG)
 
@@ -68,10 +69,10 @@ def ws_get_config(
     connection: websocket_api.ActiveConnection,
     msg: dict,
 ) -> None:
-    """Return Music Assistant config over WebSocket.
+    """Return the Sendspin server URL over WebSocket.
 
     Called by the frontend JS via hass.connection.sendMessagePromise().
-    Authentication is handled by the HA WebSocket framework automatically.
+    Authentication is handled by the HA WebSocket framework.
     """
     entries = hass.config_entries.async_entries(DOMAIN)
     if not entries:
@@ -79,12 +80,10 @@ def ws_get_config(
         return
 
     entry = entries[0]
-    ma_url = entry.data.get(CONF_MA_URL, "")
-    ma_token = entry.data.get(CONF_MA_TOKEN, "")
+    server_url = entry.data.get(CONF_SERVER_URL, "")
 
     _LOGGER.debug("SendSpin: config requested by user %s", connection.user.name)
 
     connection.send_result(msg["id"], {
-        "ma_url": ma_url,
-        "token": ma_token,
+        "server_url": server_url,
     })
