@@ -41,7 +41,7 @@ function getPlayerId() {
 
             console.log('[SendSpin] Creating player with token:', !!token);
 
-            // @ts-ignore
+            // @ts-ignore - SendspinPlayer config types may not include all runtime properties
             player = new SendspinPlayer({
                 playerId: playerId,
                 baseUrl: proxyBase,
