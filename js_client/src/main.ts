@@ -493,10 +493,46 @@ declare global {
             const configUrl = window.location.origin + '/api/sendspin_player/config';
             console.log('[SendSpin] Fetching config from:', configUrl);
 
-            const configReq = await fetch(configUrl);
+            // Prepare fetch options with authentication
+            const fetchOptions: RequestInit = {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include', // Include cookies for session auth
+            };
+
+            // If running in Home Assistant, try to get the auth token
+            // Home Assistant stores auth in sessionStorage under 'hassAuthToken'
+            const authToken = (window as any).hassAuthToken || 
+                              sessionStorage.getItem('hassAuthToken') ||
+                              localStorage.getItem('hassAuthToken');
+            
+            if (authToken) {
+                console.log('[SendSpin] Auth token found, adding to request');
+                fetchOptions.headers = {
+                    ...fetchOptions.headers,
+                    'Authorization': `Bearer ${authToken}`,
+                };
+            } else {
+                console.warn('[SendSpin] No auth token found - relying on session cookies');
+            }
+
+            const configReq = await fetch(configUrl, fetchOptions);
 
             if (!configReq.ok) {
-                console.warn(`[SendSpin] Config fetch failed: ${configReq.status}`);
+                console.error(
+                    `[SendSpin] Config fetch failed: ${configReq.status} ${configReq.statusText}`,
+                    configReq
+                );
+                
+                // Log response text for debugging
+                try {
+                    const respText = await configReq.text();
+                    console.debug('[SendSpin] Response body:', respText);
+                } catch (e) {
+                    // Ignore error reading response
+                }
                 return;
             }
 
@@ -505,7 +541,7 @@ declare global {
             const token = config.token?.trim();
 
             if (!maUrl) {
-                console.warn('[SendSpin] Music Assistant URL not configured');
+                console.warn('[SendSpin] Music Assistant URL not configured in integration');
                 return;
             }
 
