@@ -8,7 +8,7 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.frontend import add_extra_js_url
 
 from .const import DOMAIN, CONF_MA_URL
-from .api import SendSpinProxyView, SendSpinConfigView
+from .api import SendSpinConfigView
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,10 +19,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     hass.data.setdefault(DOMAIN, {})
     
-    ma_url = entry.data.get(CONF_MA_URL)
-    
-    # 1. Register WebSocket Proxy
-    hass.http.register_view(SendSpinProxyView(hass, ma_url))
+    # 1. Register Config Endpoint
+    # This returns the Music Assistant URL and token for direct browser connection
     hass.http.register_view(SendSpinConfigView(hass))
     
     # 2. Register Static Assets
@@ -38,12 +36,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
     ])
     
-    # 3. Inject the script into Lovelace
-    # This ensures the player starts on every dashboard
+    # 3. Inject the bootstrap script into Lovelace
+    # This ensures the SendSpin player registers on every dashboard
     add_extra_js_url(hass, "/sendspin_player_static/sendspin-bootstrap.js?v=1")
     
     hass.data[DOMAIN][entry.entry_id] = {
-        "ma_url": ma_url
+        "ma_url": entry.data.get(CONF_MA_URL)
     }
 
     return True

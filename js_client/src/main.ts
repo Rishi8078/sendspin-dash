@@ -1,35 +1,33 @@
 
 import { SendspinPlayer } from '@music-assistant/sendspin-js';
 
-// Unique ID logic
+// Unique ID logic (matches Dockslab)
 const STORAGE_KEY = 'sendspin-ha-player-id';
 function getPlayerId() {
     let id = localStorage.getItem(STORAGE_KEY);
     if (!id) {
-        id = `ha-browser-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+        id = `ha-browser-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
         localStorage.setItem(STORAGE_KEY, id);
     }
     return id;
 }
 
-// Main logic
+// Main logic (IIFE for isolation)
 (function bootstrapSendSpin() {
     console.log('[SendSpin] Initializing headless player for Home Assistant...');
 
     const playerId = getPlayerId();
-    const proxyBase = window.location.origin + '/api/sendspin_player';
-
     let player: SendspinPlayer | null = null;
     let audioUnlocked = false;
 
     async function initPlayer() {
         if (player) return;
 
-        console.log(`[SendSpin] Connecting to proxy: ${proxyBase}`);
-
         try {
-            // Fetch configuration (Token) from Home Assistant API
+            // Fetch configuration from Home Assistant integration
             const configUrl = window.location.origin + '/api/sendspin_player/config';
+            console.log('[SendSpin] Fetching config from:', configUrl);
+            
             const configReq = await fetch(configUrl);
             
             if (!configReq.ok) {
@@ -37,43 +35,43 @@ function getPlayerId() {
             }
             
             const config = await configReq.json();
-            const token = config.token || undefined;
+            const maUrl = config.ma_url?.trim();
+            const token = config.token?.trim();
 
-            console.log('[SendSpin] Creating player with token:', !!token);
+            if (!maUrl) {
+                throw new Error('Music Assistant URL not configured in Home Assistant');
+            }
 
+            console.log('[SendSpin] Got config - MA URL:', maUrl, 'has token:', !!token);
+            console.log('[SendSpin] Connecting directly to Music Assistant...');
+
+            // Connect directly to Music Assistant (like Dockslab does)
             const playerConfig: any = {
                 playerId: playerId,
-                baseUrl: proxyBase,
+                baseUrl: maUrl,  // ← Direct connection to MA, not proxy
                 clientName: 'Home Assistant Browser',
                 correctionMode: 'quality-local',
-                token: token,
-                // Critical: Handle state changes from the player
+                token: token || undefined,
+                // Handle state changes from Music Assistant
                 onStateChange: (state: any) => {
                     console.log('[SendSpin] State changed:', {
                         isPlaying: state.isPlaying,
                         hasMetadata: !!state.serverState?.metadata,
-                        connected: state.isConnected,
                     });
                     
                     if (state.serverState?.metadata) {
+                        const meta = state.serverState.metadata;
                         console.log('[SendSpin] Now playing:', {
-                            title: state.serverState.metadata.title,
-                            artist: state.serverState.metadata.artist,
+                            title: meta.title,
+                            artist: meta.artist,
                         });
                     }
-                },
-                // Handle connection state
-                onConnected: () => {
-                    console.log('[SendSpin] Connected to Music Assistant');
-                },
-                onDisconnected: (reason?: string) => {
-                    console.log('[SendSpin] Disconnected:', reason);
                 },
             };
 
             player = new SendspinPlayer(playerConfig);
 
-            // Handle Audio Context Unlocking (required for audio playback)
+            // Audio context unlocking (required for Web Audio)
             const unlockAudio = () => {
                 if (audioUnlocked) return;
                 audioUnlocked = true;
@@ -85,22 +83,23 @@ function getPlayerId() {
             document.addEventListener('click', unlockAudio);
             document.addEventListener('touchstart', unlockAudio);
 
-            console.log('[SendSpin] Attempting to connect...');
+            console.log('[SendSpin] Connecting...');
             await player.connect();
             console.log('[SendSpin] Connected successfully!');
 
         } catch (e) {
-            console.error('[SendSpin] Failed to init:', e);
+            console.error('[SendSpin] Failed to initialize:', e);
             if (e instanceof Error) {
-                console.error('[SendSpin] Error details:', e.message, e.stack);
+                console.error('[SendSpin] Details:', e.message);
             }
             player = null;
-            // Retry logic - wait 5 seconds before retrying
+            // Retry after 5 seconds
             console.log('[SendSpin] Retrying in 5 seconds...');
             setTimeout(initPlayer, 5000);
         }
     }
 
+    // Start initialization
     async function start() {
         await initPlayer();
     }
