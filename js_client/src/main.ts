@@ -69,6 +69,7 @@ class PlayerManager {
     private maxReconnectAttempts = 10;
     private reconnectDelay = 5000;
     private currentBaseUrl: string | null = null;
+    private currentToken: string | undefined = undefined;
 
     constructor() {
         this.state = {
@@ -146,7 +147,7 @@ class PlayerManager {
         });
     }
 
-    async connect(baseUrl: string): Promise<void> {
+    async connect(baseUrl: string, token?: string): Promise<void> {
         const url = baseUrl.replace(/\/+$/, '').trim();
         if (!url || !/^https?:\/\//i.test(url)) {
             this.setState({ connectionState: 'error', connectionError: 'Invalid URL' });
@@ -164,6 +165,7 @@ class PlayerManager {
         }
 
         this.currentBaseUrl = url;
+        this.currentToken = token;
         this.reconnectAttempts = 0;
         this.setState({ connectionState: 'connecting', connectionError: null, baseUrl: url });
 
@@ -177,8 +179,9 @@ class PlayerManager {
                 baseUrl: url,
                 clientName: 'Home Assistant Browser',
                 correctionMode: 'sync',
+                token: token || undefined,
                 onStateChange: (s) => this.handleStateChange(s),
-            });
+            } as any);
 
             this.unlockAudio();
             console.log('[Sendspin] Connecting to:', url);
@@ -296,7 +299,7 @@ class PlayerManager {
         this.reconnectAttempts++;
         console.log(`[Sendspin] Reconnecting in ${(delay / 1000).toFixed(1)}s (attempt ${this.reconnectAttempts})`);
         this.reconnectTimer = setTimeout(() => {
-            if (this.currentBaseUrl) this.connect(this.currentBaseUrl);
+            if (this.currentBaseUrl) this.connect(this.currentBaseUrl, this.currentToken);
         }, delay);
     }
 
@@ -384,7 +387,7 @@ declare global {
         sendspinPlayer?: {
             getState: () => PlayerState;
             subscribe: (listener: (state: PlayerState) => void) => () => void;
-            connect: (baseUrl: string) => Promise<void>;
+            connect: (baseUrl: string, token?: string) => Promise<void>;
             disconnect: () => void;
             play: () => void;
             pause: () => void;
@@ -411,7 +414,7 @@ declare global {
     window.sendspinPlayer = {
         getState: () => mgr.getState(),
         subscribe: (fn) => mgr.subscribe(fn),
-        connect: (url) => mgr.connect(url),
+        connect: (url, token) => mgr.connect(url, token),
         disconnect: () => mgr.disconnect(),
         play: () => mgr.play(),
         pause: () => mgr.pause(),
@@ -461,6 +464,7 @@ declare global {
             console.log('[Sendspin] Got config:', config);
 
             const serverUrl = config?.server_url?.trim();
+            const token = config?.token?.trim();
             if (!serverUrl) {
                 console.warn('[Sendspin] Server URL not configured');
                 return;
@@ -468,9 +472,8 @@ declare global {
 
             // 3. Connect to the Sendspin server (e.g. Music Assistant)
             //    The SDK opens its own WebSocket at ws://server:port/sendspin
-            //    No auth token needed — Sendspin is a local protocol.
             console.log('[Sendspin] Connecting to Sendspin server at:', serverUrl);
-            await mgr.connect(serverUrl);
+            await mgr.connect(serverUrl, token || undefined);
         } catch (e: any) {
             console.error('[Sendspin] Auto-connect failed:', e?.message || e);
         }

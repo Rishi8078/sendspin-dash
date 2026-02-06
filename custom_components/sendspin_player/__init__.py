@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.components.frontend import add_extra_js_url
 
-from .const import DOMAIN, CONF_SERVER_URL, WS_GET_CONFIG
+from .const import DOMAIN, CONF_SERVER_URL, CONF_MA_TOKEN, WS_GET_CONFIG
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -29,6 +29,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = {
         "server_url": entry.data.get(CONF_SERVER_URL),
+        "ma_token": entry.data.get(CONF_MA_TOKEN),
     }
 
     # 1. Register WebSocket command for config delivery
@@ -81,9 +82,11 @@ def ws_get_config(
 
     entry = entries[0]
     server_url = entry.data.get(CONF_SERVER_URL, "")
+    ma_token = entry.data.get(CONF_MA_TOKEN, "")
 
     _LOGGER.debug("SendSpin: config requested by user %s", connection.user.name)
 
     connection.send_result(msg["id"], {
         "server_url": server_url,
+        "token": ma_token,
     })

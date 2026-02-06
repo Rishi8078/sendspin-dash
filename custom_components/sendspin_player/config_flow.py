@@ -11,13 +11,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
-from .const import DOMAIN, CONF_SERVER_URL
+from .const import DOMAIN, CONF_SERVER_URL, CONF_MA_TOKEN
 
 _LOGGER = logging.getLogger(__name__)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required(CONF_SERVER_URL, description={"suggested_value": "http://homeassistant.local:8095"}): str,
+        vol.Required(CONF_SERVER_URL, description={"suggested_value": "http://192.168.0.x:8095"}): str,
+        vol.Optional(CONF_MA_TOKEN): str,
     }
 )
 
