@@ -29,3 +29,14 @@ config/
 # Environment
 .env
 .env.local
+# Documentation
+INDEX.md
+QUICK_REFERENCE.md
+SUMMARY.md
+IMPLEMENTATION.md
+INTEGRATION_GUIDE.md
+ARCHITECTURE.md
+CHECKLIST.md
+DELIVERY.md
+.implementation-summary.txt
+js_client/src/main.ts.bak
