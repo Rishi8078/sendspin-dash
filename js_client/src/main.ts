@@ -17,15 +17,6 @@ function getPlayerId() {
     console.log('[SendSpin] Initializing headless player for Home Assistant...');
 
     const playerId = getPlayerId();
-    // Construct the proxy URL. 
-    // The Python integration exposes a WebSocket at /api/sendspin_browser/ws
-    // The library likely appends /ws or /api/ws. 
-    // We try to pass the root that will result in the correct WS path.
-    // If lib appends '/ws', we pass '/api/sendspin_browser'. 
-
-    // Note: To be safe, we might need adjustments if the library is strict.
-    // Assuming standard MA behavior.
-    const haConfig = (window as any).hass?.config; // Retrieve HA config if needed
     const proxyBase = window.location.origin + '/api/sendspin_player';
 
     let player: SendspinPlayer | null = null;
@@ -38,7 +29,6 @@ function getPlayerId() {
 
         try {
             // Fetch configuration (Token) from Home Assistant API
-            // This endpoint requires valid HA authentication
             const configUrl = window.location.origin + '/api/sendspin_player/config';
             const configReq = await fetch(configUrl);
             
@@ -49,6 +39,8 @@ function getPlayerId() {
             const config = await configReq.json();
             const token = config.token || undefined;
 
+            console.log('[SendSpin] Creating player with token:', !!token);
+
             // @ts-ignore
             player = new SendspinPlayer({
                 playerId: playerId,
@@ -56,17 +48,35 @@ function getPlayerId() {
                 clientName: 'Home Assistant Browser',
                 correctionMode: 'quality-local',
                 token: token,
+                // Critical: Handle state changes from the player
+                onStateChange: (state: any) => {
+                    console.log('[SendSpin] State changed:', {
+                        isPlaying: state.isPlaying,
+                        hasMetadata: !!state.serverState?.metadata,
+                        connected: state.isConnected,
+                    });
+                    
+                    if (state.serverState?.metadata) {
+                        console.log('[SendSpin] Now playing:', {
+                            title: state.serverState.metadata.title,
+                            artist: state.serverState.metadata.artist,
+                        });
+                    }
+                },
+                // Handle connection state
+                onConnected: () => {
+                    console.log('[SendSpin] Connected to Music Assistant');
+                },
+                onDisconnected: (reason?: string) => {
+                    console.log('[SendSpin] Disconnected:', reason);
+                },
             });
 
-            // Handle Audio Context Unlocking
+            // Handle Audio Context Unlocking (required for audio playback)
             const unlockAudio = () => {
                 if (audioUnlocked) return;
-                // SendSpin usually handles this internally if 'bindToDocument' or similar is used, 
-                // but explicit interaction is safer.
-                // We'll trust the lib to handle the stream, but we ensure interaction 'wakes' it.
-                // Just creating the player often prepares the context.
-                // We can try to play a silent sound or just let the lib handle it.
                 audioUnlocked = true;
+                console.log('[SendSpin] Audio context unlocked');
                 document.removeEventListener('click', unlockAudio);
                 document.removeEventListener('touchstart', unlockAudio);
             };
@@ -74,8 +84,9 @@ function getPlayerId() {
             document.addEventListener('click', unlockAudio);
             document.addEventListener('touchstart', unlockAudio);
 
+            console.log('[SendSpin] Attempting to connect...');
             await player.connect();
-            console.log('[SendSpin] Connected!');
+            console.log('[SendSpin] Connected successfully!');
 
         } catch (e) {
             console.error('[SendSpin] Failed to init:', e);
@@ -84,13 +95,13 @@ function getPlayerId() {
             }
             player = null;
             // Retry logic - wait 5 seconds before retrying
+            console.log('[SendSpin] Retrying in 5 seconds...');
             setTimeout(initPlayer, 5000);
         }
     }
 
-    // Attempt to fetch config (Token) first
     async function start() {
-        initPlayer();
+        await initPlayer();
     }
 
     if (document.readyState === 'complete') {
