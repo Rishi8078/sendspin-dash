@@ -6,7 +6,8 @@
 const STORAGE_KEY_URL = "sendspin-browser-player-last-url";
 const STORAGE_KEY_NAME = "sendspin-browser-player-name";
 const STORAGE_KEY_PLAYER_ID = "sendspin-browser-player-id";
-const DISCOVERY_URL = "http://127.0.0.1:8765/servers";
+// Use the integration's discovery API (mDNS via Home Assistant); same origin when in panel
+const DISCOVERY_URL = "/api/sendspin_browser/servers";
 
 const elements = {
   connectCard: document.getElementById("connect-card"),

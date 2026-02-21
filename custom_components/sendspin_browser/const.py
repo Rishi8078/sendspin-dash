@@ -9,3 +9,6 @@ DEFAULT_PLAYER_NAME = "Dashboard"
 
 # URL path prefix for static assets (under /api/ so HA allows the request)
 STATIC_URL_PREFIX = f"/api/{DOMAIN}"
+
+# mDNS service type for Sendspin servers (client-initiated connection)
+SENDSPIN_SERVER_TYPE = "_sendspin-server._tcp.local."
