@@ -65,15 +65,23 @@
     const isRegistered = localStorage.getItem(STORAGE_KEY_REGISTERED) === "true";
     if (!isRegistered || !serverUrl) return;
 
-    // Unlock browser audio autoplay on first interaction
+    // Unlock browser audio autoplay on user interaction.
+    // iOS/iPadOS suspends the AudioContext when the app goes idle,
+    // so we keep the listeners alive to re-unlock on every interaction.
     const unlockAudio = () => {
       try {
         const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
         audio.play().catch(() => { });
       } catch (_) { }
-      ["click", "touchstart", "keydown"].forEach(e => document.removeEventListener(e, unlockAudio));
     };
-    ["click", "touchstart", "keydown"].forEach(e => document.addEventListener(e, unlockAudio, { once: true }));
+    ["click", "touchstart", "keydown"].forEach(e => document.addEventListener(e, unlockAudio));
+
+    // Resume AudioContext when app returns to foreground (iOS suspends it)
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && player && player.audioContext) {
+        try { player.audioContext.resume().catch(() => { }); } catch (_) { }
+      }
+    });
 
     let player = null;
     let isConnecting = false;
@@ -110,7 +118,16 @@
             product_name: "Sendspin Dash",
             software_version: "1.0.0"
           },
-          onStateChange: function () { },
+          onStateChange: function (state) {
+            // When MA sends a play command, ensure AudioContext is resumed (iOS fix)
+            if (state === "playing" || state === "buffering") {
+              try {
+                if (player && player.audioContext && player.audioContext.state === "suspended") {
+                  player.audioContext.resume().catch(() => { });
+                }
+              } catch (_) { }
+            }
+          },
         });
         await player.connect();
 
