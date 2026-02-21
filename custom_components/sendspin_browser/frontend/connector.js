@@ -6,6 +6,7 @@
  */
 (function () {
   const CONFIG_URL = "/api/sendspin_browser/config";
+  const PING_URL = "/api/sendspin_browser/ping";
   const STORAGE_KEY_PLAYER_ID = "sendspin-browser-player-id";
   const STORAGE_KEY_URL = "sendspin-browser-player-last-url";
   const STORAGE_KEY_NAME = "sendspin-browser-player-name";
@@ -123,6 +124,17 @@
         player = null;
       } finally {
         isConnecting = false;
+      }
+
+      // Ping HA backend to report "connected" status
+      if (player && player.isConnected) {
+        try {
+          fetch(PING_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ player_id: playerId, name: clientName })
+          });
+        } catch (_) { }
       }
     };
 

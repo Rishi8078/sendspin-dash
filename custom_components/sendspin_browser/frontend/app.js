@@ -180,6 +180,63 @@ function disconnect() {
   showError("");
 }
 
+const PLAYERS_URL = "/api/sendspin_browser/players";
+let playersInterval = null;
+
+async function updateActivePlayers() {
+  try {
+    const res = await fetch(PLAYERS_URL, { method: "GET" });
+    if (!res.ok) return;
+    const playersMap = await res.json();
+
+    // Convert to array and filter out the current connection's player ID over websocket
+    let activePlayers = Array.isArray(playersMap) ? playersMap : Object.values(playersMap);
+    const myId = player ? player.config.playerId : getOrCreatePlayerId();
+    activePlayers = activePlayers.filter(p => p.player_id !== myId);
+
+    const listElement = document.getElementById("active-players-list");
+    const cardElement = document.getElementById("active-players-card");
+
+    if (activePlayers.length === 0) {
+      cardElement.classList.add("hidden");
+      return;
+    }
+
+    cardElement.classList.remove("hidden");
+    listElement.innerHTML = "";
+
+    for (const p of activePlayers) {
+      const item = document.createElement("div");
+      item.className = "player-item";
+
+      const info = document.createElement("div");
+      info.className = "player-info";
+
+      const nameEl = document.createElement("span");
+      nameEl.className = "player-item-name";
+      nameEl.textContent = p.name || "Unknown Browser";
+
+      const idEl = document.createElement("span");
+      idEl.className = "player-item-id";
+      idEl.textContent = p.player_id;
+
+      info.appendChild(nameEl);
+      info.appendChild(idEl);
+
+      const statusWrap = document.createElement("div");
+      statusWrap.title = "Connected";
+      const statusIcon = document.createElement("div");
+      statusIcon.className = "player-item-status";
+      statusWrap.appendChild(statusIcon);
+
+      item.appendChild(info);
+      item.appendChild(statusWrap);
+
+      listElement.appendChild(item);
+    }
+  } catch (_) { }
+}
+
 loadSavedSettings();
 
 elements.connectBtn.addEventListener("click", connect);
@@ -187,9 +244,6 @@ elements.serverUrlInput.addEventListener("keydown", (e) => { if (e.key === "Ente
 elements.findServersBtn.addEventListener("click", findServers);
 elements.disconnectBtn.addEventListener("click", disconnect);
 
-try {
-  const bc = new BroadcastChannel('sendspin-browser-sync');
-  setInterval(() => bc.postMessage('panel_active'), 2000);
-  bc.postMessage('panel_active');
-  window.addEventListener("beforeunload", () => bc.postMessage('panel_inactive'));
-} catch (_) { }
+// Start polling for other active players
+updateActivePlayers();
+playersInterval = setInterval(updateActivePlayers, 5000);

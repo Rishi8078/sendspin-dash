@@ -16,7 +16,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, STATIC_URL_PREFIX
-from .discovery import SendspinConfigView, SendspinDiscoveryView
+from .discovery import SendspinConfigView, SendspinDiscoveryView, SendspinPingView, SendspinPlayersView
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +33,8 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     hass.http.register_view(SendspinDiscoveryView())
     hass.http.register_view(SendspinConfigView())
+    hass.http.register_view(SendspinPingView())
+    hass.http.register_view(SendspinPlayersView())
 
     # Serve frontend (player HTML/JS/CSS + panel script) at /sendspin_browser/*
     await hass.http.async_register_static_paths(
