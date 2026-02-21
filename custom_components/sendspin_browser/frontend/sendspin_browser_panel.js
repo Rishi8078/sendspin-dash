@@ -19,7 +19,7 @@
   }
 
   function buildPlayerUrl(config) {
-    const base = "/sendspin_browser/player.html";
+    const base = "/api/sendspin_browser/player.html";
     const params = new URLSearchParams();
     if (config.server_url) params.set("server_url", config.server_url);
     if (config.player_name) params.set("player_name", config.player_name);
