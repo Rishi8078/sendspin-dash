@@ -13,49 +13,48 @@
 
 <body>
   <div class="app">
-    <header class="header">
-      <h1 class="logo">Sendspin</h1>
-      <span class="tagline">Player Dashboard</span>
-    </header>
 
-    <!-- Connection / Registration Form -->
-    <section id="connect-card" class="panel connect-panel hidden">
-      <div class="connect-content">
-        <p class="connect-intro">Register this device as an actively discovering Sendspin Player. The Server URL is
-          securely inherited from your main Home Assistant integration configuration.</p>
-        <label for="player-name" class="connect-label">Device Name</label>
-        <input type="text" id="player-name" class="connect-input" placeholder="e.g. Living Room Tablet"
-          autocomplete="off" />
+    <!-- ── This Browser ── -->
+    <div class="section-card">
+      <h2 class="section-title">This Browser</h2>
+
+      <div class="card-row">
+        <div class="row-text">
+          <span class="row-label">Register</span>
+          <span class="row-sub">Enable this browser as a player in Music Assistant</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="register-toggle" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div id="register-fields" class="register-fields hidden">
+        <div class="field-group">
+          <label class="field-label" for="player-name">Player Name</label>
+          <span class="field-hint">A friendly name for this browser device.</span>
+          <input type="text" id="player-name" class="field-input" placeholder="e.g. Living Room Tablet"
+            autocomplete="off" />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Browser ID</label>
+          <span class="field-hint">A unique identifier for this browser-device combination.</span>
+          <input type="text" id="browser-id" class="field-input" readonly />
+        </div>
+
         <p id="connect-error" class="error-msg hidden" role="alert"></p>
-        <button id="connect-btn" class="btn btn-primary btn-connect">Save Settings</button>
       </div>
-    </section>
+    </div>
 
-    <!-- Active Status Display -->
-    <section id="registered-card" class="panel registered-panel hidden">
-      <div class="registered-content">
-        <div class="registered-badge" aria-hidden="true"></div>
-        <p class="registered-title">Status: Connected</p>
-        <p class="registered-name" id="registered-name">—</p>
-        <p class="registered-server" id="registered-server">—</p>
-        <button id="disconnect-btn" class="btn btn-text">Edit Settings</button>
+    <!-- ── Registered Players ── -->
+    <div class="section-card">
+      <h2 class="section-title">Registered Players</h2>
+      <div id="players-list" class="players-list">
+        <div class="players-empty">No registered players yet.</div>
       </div>
-    </section>
+    </div>
 
-    <!-- Other Connected Dashboards -->
-    <section id="active-players-card" class="panel active-players-panel hidden">
-      <h2 class="active-players-title">Other Connected Dashboards</h2>
-      <div id="active-players-list" class="active-players-list">
-        <!-- Populated by JS -->
-      </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <a href="https://www.sendspin-audio.com" target="_blank" rel="noopener">Sendspin</a>
-      <span class="dot">·</span>
-      <a href="https://github.com/Sendspin-Protocol/sendspin-cli" target="_blank" rel="noopener">sendspin-cli</a>
-    </footer>
   </div>
 
   <script type="module" src="app.js"></script>
