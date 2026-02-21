@@ -73,81 +73,61 @@
 
     let player = null;
     let isConnecting = false;
-    let panelIsActiveGlobally = false;
 
-    try {
-      const bc = new BroadcastChannel('sendspin-browser-sync');
-      bc.onmessage = (e) => {
-        if (e.data === 'panel_active') panelIsActiveGlobally = true;
-        if (e.data === 'panel_inactive') panelIsActiveGlobally = false;
-      };
-      setInterval(() => { panelIsActiveGlobally = false; }, 6000);
-    } catch (_) { }
+    const connectPlayer = async () => {
+      let currentUrl = normalizeBaseUrl(localStorage.getItem(STORAGE_KEY_URL)) || serverUrl;
+      let currentName = localStorage.getItem(STORAGE_KEY_NAME) || clientName;
 
-    const runBackgroundPlayer = () => {
-      const connectPlayer = async () => {
-        let currentUrl = normalizeBaseUrl(localStorage.getItem(STORAGE_KEY_URL)) || serverUrl;
-        let currentName = localStorage.getItem(STORAGE_KEY_NAME) || clientName;
+      // Prevent background worker from clashing with the UI panel if it's open on THIS tab
+      const panelIsActiveLocally = !!document.querySelector("sendspin-browser-panel");
 
-        const panelIsActiveLocally = !!document.querySelector("sendspin-browser-panel");
-
-        if (panelIsActiveLocally || panelIsActiveGlobally) {
-          if (player) {
-            try { player.disconnect(); } catch (_) { }
-            player = null;
-          }
-          return;
-        }
-
-        if (isConnecting) return;
-
+      if (panelIsActiveLocally) {
         if (player) {
-          if (player.isConnected && currentUrl === serverUrl && currentName === clientName) {
-            return;
-          }
           try { player.disconnect(); } catch (_) { }
           player = null;
         }
+        return;
+      }
 
-        serverUrl = currentUrl;
-        clientName = currentName;
-        if (!serverUrl) return;
+      if (isConnecting) return;
 
-        isConnecting = true;
-        try {
-          const { SendspinPlayer } = await import(
-            "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
-          );
-          player = new SendspinPlayer({
-            baseUrl: serverUrl,
-            playerId,
-            clientName: clientName,
-            onStateChange: function () { },
-          });
-          await player.connect();
-
-          window.addEventListener("beforeunload", function () {
-            try { if (player) player.disconnect(); } catch (_) { }
-          });
-        } catch (_) {
-          player = null;
-        } finally {
-          isConnecting = false;
+      if (player) {
+        if (player.isConnected && currentUrl === serverUrl && currentName === clientName) {
+          return;
         }
-      };
+        try { player.disconnect(); } catch (_) { }
+        player = null;
+      }
 
-      connectPlayer();
-      setInterval(connectPlayer, 5000);
+      serverUrl = currentUrl;
+      clientName = currentName;
+      if (!serverUrl) return;
+
+      isConnecting = true;
+      try {
+        const { SendspinPlayer } = await import(
+          "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
+        );
+        player = new SendspinPlayer({
+          baseUrl: serverUrl,
+          playerId,
+          clientName: clientName,
+          onStateChange: function () { },
+        });
+        await player.connect();
+
+        window.addEventListener("beforeunload", function () {
+          try { if (player) player.disconnect(); } catch (_) { }
+        });
+      } catch (_) {
+        player = null;
+      } finally {
+        isConnecting = false;
+      }
     };
 
-    if (typeof navigator !== "undefined" && navigator.locks) {
-      navigator.locks.request("sendspin-browser-player", () => {
-        runBackgroundPlayer();
-        return new Promise(() => { });
-      }).catch(() => { });
-    } else {
-      runBackgroundPlayer();
-    }
+    await connectPlayer();
+    setInterval(connectPlayer, 5000);
   }
 
   run();
