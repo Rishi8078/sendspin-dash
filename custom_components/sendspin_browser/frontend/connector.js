@@ -47,8 +47,9 @@
     const serverUrl = normalizeBaseUrl(config.server_url);
     if (!serverUrl) return;
 
-    const playerName = (config.player_name && config.player_name.trim()) || undefined;
     const playerId = getOrCreatePlayerId();
+    // Auto-register like browser_mod: stable ID + friendly name
+    const clientName = "HA Browser";
 
     try {
       const { SendspinPlayer } = await import(
@@ -57,7 +58,7 @@
       const player = new SendspinPlayer({
         baseUrl: serverUrl,
         playerId,
-        clientName: playerName,
+        clientName: clientName,
         onStateChange: function () {},
       });
       await player.connect();

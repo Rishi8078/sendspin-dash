@@ -1,74 +1,56 @@
 /**
  * Sendspin Browser Player - Home Assistant panel.
- * UI like browser_mod: ha-card, ha-settings-row, no iframe.
+ * Manages this browser as a Sendspin player. Config (server URL) is set in Integration settings.
+ * UI like browser_mod: ha-card, ha-settings-row; config fetched from API.
  */
 (function () {
+  const CONFIG_URL = "/api/sendspin_browser/config";
   const SERVERS_URL = "/api/sendspin_browser/servers";
-
-  // #region agent log
-  function _dbg(payload) {
-    var body = Object.assign({ sessionId: "5756f4", timestamp: Date.now(), location: "sendspin_browser_panel.js", runId: payload.runId || "run1", hypothesisId: payload.hypothesisId }, payload);
-    fetch("http://127.0.0.1:7244/ingest/816d7f5c-57f4-4a63-8527-a1e79b7b36b8", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5756f4" }, body: JSON.stringify(body) }).catch(function () {});
-  }
-  // #endregion
-
-  function getConfigFromHass(hass) {
-    // #region agent log
-    _dbg({ hypothesisId: "H2", message: "getConfigFromHass entry", data: { hasHass: !!hass, hasConfigEntries: !!(hass && hass.config_entries), hasEntries: !!(hass && hass.config_entries && hass.config_entries.entries), entriesType: hass && hass.config_entries ? typeof hass.config_entries.entries : "n/a", entriesLength: (hass && hass.config_entries && hass.config_entries.entries) ? hass.config_entries.entries.length : 0, configEntriesKeys: hass && hass.config_entries ? Object.keys(hass.config_entries) : [] } });
-    // #endregion
-    if (!hass || !hass.config_entries || !hass.config_entries.entries) {
-      return { server_url: "", player_name: "Dashboard", entry_id: null };
-    }
-    const entry = hass.config_entries.entries.find(function (e) {
-      return e.domain === "sendspin_browser";
-    });
-    // #region agent log
-    _dbg({ hypothesisId: "H4", message: "getConfigFromHass entry found", data: { found: !!entry, entryId: entry ? entry.entry_id : null, entryKeys: entry ? Object.keys(entry) : [], optionsKeys: entry && entry.options ? Object.keys(entry.options) : [], server_url: entry && entry.options ? entry.options.server_url : "n/a" } });
-    // #endregion
-    const opts = (entry && entry.options) || {};
-    return {
-      server_url: opts.server_url || "",
-      player_name: opts.player_name || "Dashboard",
-      entry_id: entry ? entry.entry_id : null,
-    };
-  }
 
   class SendspinBrowserPanel extends HTMLElement {
     constructor() {
       super();
       this._hass = null;
-      this._config = { server_url: "", player_name: "Dashboard" };
+      this._config = { server_url: "", entry_id: null };
       this._servers = [];
       this._loadingServers = false;
+      this._configFetched = false;
       this.attachShadow({ mode: "open" });
     }
 
     connectedCallback() {
-      // #region agent log
-      _dbg({ hypothesisId: "H3", message: "connectedCallback", data: { hasHass: !!this._hass, panelKeys: this.panel ? Object.keys(this.panel) : "no panel" } });
-      // #endregion
       this.style.display = "block";
       this.style.height = "100%";
       this.style.minHeight = "100%";
+      this._fetchConfig();
     }
 
     set hass(hass) {
-      // #region agent log
-      _dbg({ hypothesisId: "H1", message: "hass setter called", data: { hasHass: !!hass, hassKeys: hass ? Object.keys(hass).slice(0, 30) : [] } });
-      // #endregion
       this._hass = hass;
-      this._config = getConfigFromHass(hass);
-      // #region agent log
-      _dbg({ hypothesisId: "H5", message: "config before _render", data: { server_url: this._config.server_url, player_name: this._config.player_name, entry_id: this._config.entry_id } });
-      // #endregion
+      this._fetchConfig();
+    }
+
+    async _fetchConfig() {
+      this._render();
+      if (this._configFetched) return;
+      this._configFetched = true;
+      try {
+        const res = await fetch(CONFIG_URL, { method: "GET", credentials: "same-origin" });
+        if (res.ok) {
+          const data = await res.json();
+          this._config = {
+            server_url: (data.server_url || "").trim(),
+            entry_id: data.entry_id || null,
+          };
+        }
+      } catch (_) {
+        this._config = { server_url: "", entry_id: null };
+      }
       this._render();
     }
 
     _render() {
       const root = this.shadowRoot;
-      // #region agent log
-      _dbg({ hypothesisId: "H5", message: "_render called", data: { hasRoot: !!root, configured: !!(this._config && this._config.server_url && this._config.server_url.trim()), config: this._config } });
-      // #endregion
       if (!root) return;
 
       const configured = !!(this._config.server_url && this._config.server_url.trim());
@@ -97,26 +79,25 @@
 
       const alert = document.createElement("ha-alert");
       alert.setAttribute("alert-type", "info");
-      alert.innerHTML = "This browser stays registered as a Sendspin player when any Home Assistant tab is open. To change server or player name: <b>Settings → Integrations → Sendspin Browser → Configure</b>.";
+      alert.innerHTML = "Set the Sendspin server URL in <b>Settings → Integrations → Sendspin Browser</b>. This browser then auto-registers as a player when any HA tab is open (like Browser Mod).";
       content.appendChild(alert);
 
       const rowServer = document.createElement("ha-settings-row");
-      rowServer.innerHTML = '<span slot="heading">Server URL</span><span slot="description">' + (this._config.server_url ? this._config.server_url : "Not set. Configure in Integration options.") + '</span>';
+      rowServer.innerHTML = '<span slot="heading">Server URL</span><span slot="description">' + (this._config.server_url ? this._config.server_url : "Not set. Open configuration to set the server address.") + '</span>';
       content.appendChild(rowServer);
 
-      const rowName = document.createElement("ha-settings-row");
-      rowName.innerHTML = '<span slot="heading">Player name</span><span slot="description">' + (this._config.player_name || "Dashboard") + '</span>';
-      content.appendChild(rowName);
+      const rowStatus = document.createElement("ha-settings-row");
+      rowStatus.innerHTML = '<span slot="heading">Player</span><span slot="description">' + (configured ? "Auto-registered as a Sendspin player when this (or any) HA tab is open." : "Set server URL in integration settings to register.") + '</span>';
+      content.appendChild(rowStatus);
 
-      const entryId = this._config.entry_id;
-      if (entryId) {
+      if (this._config.entry_id) {
         const rowConfigure = document.createElement("ha-settings-row");
-        rowConfigure.innerHTML = '<span slot="heading">Configure</span><span slot="description">Set server URL and player name</span>';
+        rowConfigure.innerHTML = '<span slot="heading">Configure</span><span slot="description">Set server URL in integration settings</span>';
         const configBtn = document.createElement("ha-button");
         configBtn.textContent = "Open configuration";
         configBtn.addEventListener("click", () => {
           if (this._hass) {
-            this._hass.navigate("/config/integrations/integration/" + entryId, { replace: false });
+            this._hass.navigate("/config/integrations/integration/" + this._config.entry_id, { replace: false });
           }
         });
         rowConfigure.appendChild(configBtn);
@@ -128,7 +109,7 @@
       const findBtn = document.createElement("ha-button");
       findBtn.textContent = "Find";
       findBtn.disabled = this._loadingServers;
-      findBtn.addEventListener("click", () => this._findServers(content, findBtn));
+      findBtn.addEventListener("click", () => this._findServers(findBtn));
       rowFind.appendChild(findBtn);
       content.appendChild(rowFind);
 
@@ -149,7 +130,7 @@
             if (navigator.clipboard && navigator.clipboard.writeText) {
               navigator.clipboard.writeText(s.url || "").then(function () {
                 if (window.__sendspinPanelToast) {
-                  window.__sendspinPanelToast("URL copied. Paste it in Integration options.");
+                  window.__sendspinPanelToast("URL copied. Paste it in Integration configuration.");
                 }
               });
             }
@@ -164,7 +145,7 @@
       root.appendChild(card);
     }
 
-    async _findServers(container, findBtn) {
+    async _findServers(findBtn) {
       this._loadingServers = true;
       findBtn.disabled = true;
       this._servers = [];

@@ -8,19 +8,15 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import CONF_PLAYER_NAME, CONF_SERVER_URL, DEFAULT_PLAYER_NAME, DOMAIN
+from .const import CONF_SERVER_URL, DOMAIN
 
 
 def _schema(user_input: dict | None) -> vol.Schema:
     return vol.Schema(
         {
-            vol.Optional(
+            vol.Required(
                 CONF_SERVER_URL,
                 default=(user_input or {}).get(CONF_SERVER_URL, ""),
-            ): str,
-            vol.Optional(
-                CONF_PLAYER_NAME,
-                default=(user_input or {}).get(CONF_PLAYER_NAME, DEFAULT_PLAYER_NAME),
             ): str,
         }
     )
@@ -42,9 +38,6 @@ class SendspinBrowserConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data={},
                 options={
                     CONF_SERVER_URL: (user_input.get(CONF_SERVER_URL) or "").strip(),
-                    CONF_PLAYER_NAME: (
-                        user_input.get(CONF_PLAYER_NAME) or DEFAULT_PLAYER_NAME
-                    ).strip(),
                 },
             )
 
@@ -80,19 +73,11 @@ class SendspinBrowserOptionsFlow(config_entries.OptionsFlow):
                 title="",
                 data={
                     CONF_SERVER_URL: (user_input.get(CONF_SERVER_URL) or "").strip(),
-                    CONF_PLAYER_NAME: (
-                        user_input.get(CONF_PLAYER_NAME) or DEFAULT_PLAYER_NAME
-                    ).strip(),
                 },
             )
 
         options = self._config_entry.options or self._config_entry.data or {}
         return self.async_show_form(
             step_id="init",
-            data_schema=_schema(
-                {
-                    CONF_SERVER_URL: options.get(CONF_SERVER_URL, ""),
-                    CONF_PLAYER_NAME: options.get(CONF_PLAYER_NAME, DEFAULT_PLAYER_NAME),
-                }
-            ),
+            data_schema=_schema({CONF_SERVER_URL: options.get(CONF_SERVER_URL, "")}),
         )
