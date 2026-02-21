@@ -6,10 +6,10 @@
  */
 (function () {
   const CONFIG_URL = "/api/sendspin_browser/config";
-  const PING_URL = "/api/sendspin_browser/ping";
   const STORAGE_KEY_PLAYER_ID = "sendspin-browser-player-id";
   const STORAGE_KEY_URL = "sendspin-browser-player-last-url";
   const STORAGE_KEY_NAME = "sendspin-browser-player-name";
+  const STORAGE_KEY_REGISTERED = "sendspin-browser-registered";
 
   function getOrCreatePlayerId() {
     try {
@@ -61,24 +61,9 @@
       clientName = "HA Browser";
     }
 
-    // ── STEP 1: Always ping HA to register this browser, regardless of Sendspin connection ──
-    const pingHA = () => {
-      try {
-        fetch(PING_URL, {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ player_id: playerId, name: clientName })
-        }).catch(() => { });
-      } catch (_) { }
-    };
-
-    // Fire immediately and repeat every 10 seconds
-    pingHA();
-    setInterval(pingHA, 10000);
-
-    // ── STEP 2: If we have a server URL, try to connect the Sendspin SDK ──
-    if (!serverUrl) return;
+    // ── Check if user actually enabled this browser ──
+    const isRegistered = localStorage.getItem(STORAGE_KEY_REGISTERED) === "true";
+    if (!isRegistered || !serverUrl) return;
 
     // Unlock browser audio autoplay on first interaction
     const unlockAudio = () => {
