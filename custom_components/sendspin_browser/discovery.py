@@ -13,10 +13,9 @@ from zeroconf import IPVersion, ServiceStateChange
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
 
 from .const import (
-    CONF_SERVER_URL,
     CONF_MA_URL,
     CONF_MA_TOKEN,
-    DEFAULT_SERVER_URL,
+    DEFAULT_MA_URL,
     DOMAIN,
     SENDSPIN_SERVER_TYPE,
     STATIC_URL_PREFIX,
@@ -103,7 +102,7 @@ class SendspinConfigView(HomeAssistantView):
 
     url = f"{STATIC_URL_PREFIX}/config"
     name = f"api:{DOMAIN}:config"
-    requires_auth = True
+    requires_auth = False
 
     async def get(self, request):
         """Return JSON { server_url, entry_id } from the first config entry."""
@@ -113,9 +112,14 @@ class SendspinConfigView(HomeAssistantView):
             return self.json({"server_url": DEFAULT_SERVER_URL, "entry_id": None})
         entry = entries[0]
         opts = entry.options or {}
+        ma_url = (opts.get(CONF_MA_URL) or "").strip() or DEFAULT_MA_URL
+        
+        # The frontend SDK needs the Sendspin server (port 8927)
+        server_url = ma_url.replace(":8095", ":8927") if ma_url else "http://192.168.0.109:8927"
+        
         return self.json({
-            "server_url": (opts.get(CONF_SERVER_URL) or "").strip() or DEFAULT_SERVER_URL,
-            "ma_url": (opts.get(CONF_MA_URL) or "http://192.168.0.109:8095").strip(),
+            "server_url": server_url,
+            "ma_url": ma_url,
             "ma_token": (opts.get(CONF_MA_TOKEN) or "").strip(),
             "entry_id": entry.entry_id,
         })
