@@ -35,6 +35,19 @@ class SendspinBrowserPanel extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    // Pass hass to the menu button if already rendered
+    const menuBtn = this.shadowRoot && this.shadowRoot.querySelector("ha-menu-button");
+    if (menuBtn) menuBtn.hass = hass;
+  }
+
+  set narrow(narrow) {
+    this._narrow = narrow;
+    const menuBtn = this.shadowRoot && this.shadowRoot.querySelector("ha-menu-button");
+    if (menuBtn) menuBtn.narrow = narrow;
+  }
+
+  set panel(panel) {
+    this._panel = panel;
   }
 
   connectedCallback() {
@@ -116,10 +129,6 @@ class SendspinBrowserPanel extends HTMLElement {
       const row = document.createElement("div");
       row.className = "player-row" + (isSelf ? " is-self" : "");
 
-      const icon = document.createElement("div");
-      icon.className = "player-icon";
-      icon.textContent = "🖥️";
-
       const details = document.createElement("div");
       details.className = "player-details";
 
@@ -149,7 +158,6 @@ class SendspinBrowserPanel extends HTMLElement {
       const isOnline = p.state !== "unavailable";
       status.className = "player-status " + (isOnline ? "online" : "offline");
 
-      row.appendChild(icon);
       row.appendChild(details);
       row.appendChild(status);
       container.appendChild(row);
@@ -168,9 +176,13 @@ class SendspinBrowserPanel extends HTMLElement {
           color: var(--primary-text-color, #e3e3e3);
           font-family: var(--ha-font-family-body, system-ui, -apple-system, sans-serif);
           -webkit-font-smoothing: antialiased;
+          --app-header-background-color: var(--sidebar-background-color);
+          --app-header-text-color: var(--sidebar-text-color);
+          --app-header-border-bottom: 1px solid var(--divider-color);
+          --ha-card-border-radius: var(--ha-config-card-border-radius, 12px);
         }
 
-        .app {
+        .content {
           max-width: 600px;
           margin: 0 auto;
           padding: 16px;
@@ -415,48 +427,55 @@ class SendspinBrowserPanel extends HTMLElement {
         }
       </style>
 
-      <div class="app">
-        <!-- ── This Browser ── -->
-        <div class="section-card">
-          <h2 class="section-title">This Browser</h2>
+      <ha-top-app-bar-fixed>
+        <ha-menu-button
+          slot="navigationIcon"
+        ></ha-menu-button>
+        <div slot="title">Sendspin Player</div>
 
-          <div class="card-row">
-            <div class="row-text">
-              <span class="row-label">Register</span>
-              <span class="row-sub">Enable this browser as a player in Music Assistant</span>
+        <div class="content">
+          <!-- ── This Browser ── -->
+          <div class="section-card">
+            <h2 class="section-title">This Browser</h2>
+
+            <div class="card-row">
+              <div class="row-text">
+                <span class="row-label">Register</span>
+                <span class="row-sub">Enable this browser as a player in Music Assistant</span>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" id="register-toggle" ${this._registered ? "checked" : ""} />
+                <span class="toggle-slider"></span>
+              </label>
             </div>
-            <label class="toggle">
-              <input type="checkbox" id="register-toggle" ${this._registered ? "checked" : ""} />
-              <span class="toggle-slider"></span>
-            </label>
+
+            <div id="register-fields" class="register-fields ${this._registered ? "" : "hidden"}">
+              <div class="field-group">
+                <label class="field-label" for="player-name">Player Name</label>
+                <span class="field-hint">A friendly name for this browser device.</span>
+                <input type="text" id="player-name" class="field-input"
+                  placeholder="e.g. Living Room Tablet" autocomplete="off"
+                  value="${this._playerName}" />
+              </div>
+
+              <div class="field-group">
+                <label class="field-label">Browser ID</label>
+                <span class="field-hint">A unique identifier for this browser-device combination.</span>
+                <input type="text" id="browser-id" class="field-input" readonly
+                  value="${this._playerId}" />
+              </div>
+            </div>
           </div>
 
-          <div id="register-fields" class="register-fields ${this._registered ? "" : "hidden"}">
-            <div class="field-group">
-              <label class="field-label" for="player-name">Player Name</label>
-              <span class="field-hint">A friendly name for this browser device.</span>
-              <input type="text" id="player-name" class="field-input"
-                placeholder="e.g. Living Room Tablet" autocomplete="off"
-                value="${this._playerName}" />
-            </div>
-
-            <div class="field-group">
-              <label class="field-label">Browser ID</label>
-              <span class="field-hint">A unique identifier for this browser-device combination.</span>
-              <input type="text" id="browser-id" class="field-input" readonly
-                value="${this._playerId}" />
+          <!-- ── Active Players ── -->
+          <div class="section-card">
+            <h2 class="section-title">Active Players</h2>
+            <div id="players-list" class="players-list">
+              <div class="players-empty">No active players.</div>
             </div>
           </div>
         </div>
-
-        <!-- ── Active Players ── -->
-        <div class="section-card">
-          <h2 class="section-title">Active Players</h2>
-          <div id="players-list" class="players-list">
-            <div class="players-empty">No active players.</div>
-          </div>
-        </div>
-      </div>
+      </ha-top-app-bar-fixed>
     `;
   }
 }
