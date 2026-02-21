@@ -69,7 +69,7 @@ playerNameInput.addEventListener("input", () => {
 
 async function updatePlayersList() {
   try {
-    const res = await fetch("/api/sendspin_browser/players", { method: "GET" });
+    const res = await fetch("/api/sendspin_browser/players", { method: "GET", credentials: "same-origin" });
     if (!res.ok) return;
     const data = await res.json();
 
@@ -79,7 +79,7 @@ async function updatePlayersList() {
     );
 
     if (browsers.length === 0) {
-      playersList.innerHTML = '<div class="players-empty">No registered browsers yet.</div>';
+      playersList.innerHTML = '<div class="players-empty">No active players.</div>';
       return;
     }
 

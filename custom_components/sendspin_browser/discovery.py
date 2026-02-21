@@ -110,7 +110,7 @@ class SendspinConfigView(HomeAssistantView):
         hass: HomeAssistant = request.app["hass"]
         entries = hass.config_entries.async_entries(DOMAIN)
         if not entries:
-            return self.json({"server_url": DEFAULT_SERVER_URL, "entry_id": None})
+            return self.json({"server_url": "", "entry_id": None})
         entry = entries[0]
         opts = entry.options or {}
         ma_url = (opts.get(CONF_MA_URL) or "").strip() or DEFAULT_MA_URL
@@ -131,7 +131,7 @@ class SendspinPlayersView(HomeAssistantView):
 
     url = f"{STATIC_URL_PREFIX}/players"
     name = f"api:{DOMAIN}:players"
-    requires_auth = True  # We want Auth here because the HA UI securely connects to it
+    requires_auth = False
 
     async def get(self, request):
         """Fetch all players from Music Assistant API and return the raw JSON."""

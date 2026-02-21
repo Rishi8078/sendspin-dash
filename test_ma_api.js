@@ -1,46 +1,58 @@
-const token = "Yn7Iy9j6epAQbm_ZLtpmmZg8u9FwK1xhU6s4gXvMjF5BmoQUOBb2iX-pkAbadhpG";
-const maUrl = "http://192.168.0.109:8095";
+/**
+ * End-to-end test simulating exactly what the HA proxy + app.js pipeline does.
+ * 
+ * Step 1: Simulate the Python proxy (POST to MA JSON-RPC API)
+ * Step 2: Simulate the JS filter (filter by player_id prefix)
+ */
 
-async function testFetch() {
-    try {
-        const headers = { "Content-Type": "application/json" };
-        headers["Authorization"] = `Bearer ${token}`;
+const TOKEN = "Yn7Iy9j6epAQbm_ZLtpmmZg8u9FwK1xhU6s4gXvMjF5BmoQUOBb2iX-pkAbadhpG";
+const MA_URL = "http://192.168.0.109:8095";
 
-        console.log("Fetching", `${maUrl}/api`);
-        const res = await fetch(`${maUrl}/api`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ message_id: 1, command: "players/all" })
+async function test() {
+    console.log("=== Step 1: Simulating Python proxy (POST to MA /api) ===");
+
+    const headers = { "Content-Type": "application/json" };
+    headers["Authorization"] = `Bearer ${TOKEN}`;
+
+    const res = await fetch(`${MA_URL}/api`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ message_id: 1, command: "players/all" })
+    });
+
+    console.log("HTTP Status:", res.status);
+    if (!res.ok) {
+        console.error("FAIL: MA returned", res.status, res.statusText);
+        return;
+    }
+
+    const data = await res.json();
+    console.log("Raw response type:", typeof data, Array.isArray(data) ? "(array)" : "(object)");
+    console.log("Raw response length:", Array.isArray(data) ? data.length : Object.keys(data).length);
+
+    console.log("\n=== Step 2: Simulating app.js filter (Object.values + startsWith) ===");
+
+    // This is EXACTLY what app.js line 77-79 does:
+    const browsers = Object.values(data).filter(p =>
+        p.player_id && p.player_id.startsWith("sendspin-browser-")
+    );
+
+    console.log("Filtered browsers count:", browsers.length);
+
+    if (browsers.length === 0) {
+        console.log("RESULT: 'No registered browsers yet.' (EMPTY!)");
+
+        // Debug: show all player_ids to understand why filter failed
+        console.log("\nDEBUG: All player IDs in response:");
+        Object.values(data).forEach((p, i) => {
+            console.log(`  [${i}] player_id: "${p.player_id}" | startsWith check: ${p.player_id && p.player_id.startsWith("sendspin-browser-")}`);
         });
-
-        console.log("Status:", res.status);
-        if (!res.ok) return console.error("Not ok", res.statusText);
-        const data = await res.json();
-        console.log("Data keys:", Object.keys(data));
-
-        // How is the data structured?
-        let players = [];
-        if (Array.isArray(data)) {
-            players = data;
-        } else if (data.result && Array.isArray(data.result)) {
-            players = data.result;
-        } else if (data.result && typeof data.result === "object") {
-            players = Object.values(data.result);
-        } else {
-            players = Object.values(data);
-        }
-
-        const browsers = players.filter(p =>
-            p.player_id && p.player_id.startsWith("sendspin-browser-")
-        );
-        console.log("Found browsers:", browsers.length);
-        if (browsers.length > 0) {
-            console.log("Browser ID:", browsers[0].player_id);
-        }
-
-    } catch (err) {
-        console.error("Fetch error:", err);
+    } else {
+        console.log("SUCCESS! Found browsers:");
+        browsers.forEach(b => {
+            console.log(`  - ${b.name} (${b.player_id}) state=${b.state}`);
+        });
     }
 }
 
-testFetch();
+test().catch(console.error);
