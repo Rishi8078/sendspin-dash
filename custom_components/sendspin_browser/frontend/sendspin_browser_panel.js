@@ -91,13 +91,7 @@ class SendspinBrowserPanel extends HTMLElement {
     if (toggle) {
       toggle.addEventListener("change", () => {
         this._registered = toggle.checked;
-        if (this._registered) {
-          fields.classList.remove("hidden");
-          localStorage.setItem(STORAGE_KEY_REGISTERED, "true");
-        } else {
-          fields.classList.add("hidden");
-          localStorage.setItem(STORAGE_KEY_REGISTERED, "false");
-        }
+        localStorage.setItem(STORAGE_KEY_REGISTERED, this._registered ? "true" : "false");
       });
     }
 
@@ -278,36 +272,9 @@ class SendspinBrowserPanel extends HTMLElement {
           transform: translateX(22px);
         }
 
-        /* ── Register Fields ── */
-        .register-fields {
-          padding: 0 20px 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          border-top: 1px solid var(--divider-color, rgba(255, 255, 255, 0.06));
-          padding-top: 16px;
-        }
-
-        .register-fields.hidden {
-          display: none;
-        }
-
-        .field-group {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .field-label {
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: var(--primary-text-color, #e3e3e3);
-        }
-
-        .field-hint {
-          font-size: 0.8rem;
-          color: var(--secondary-text-color, #9e9e9e);
-          margin-bottom: 4px;
+        /* ── Inline Field ── */
+        .field-inline {
+          padding: 0 20px 16px;
         }
 
         .field-input {
@@ -329,12 +296,26 @@ class SendspinBrowserPanel extends HTMLElement {
           box-shadow: 0 0 0 2px rgba(var(--rgb-primary-color, 3, 169, 244), 0.2);
         }
 
-        .field-input[readonly] {
-          opacity: 0.7;
-          cursor: default;
+        /* ── Browser ID ── */
+        .browser-id-row {
+          padding: 12px 20px;
+          border-top: 1px solid var(--divider-color, rgba(255, 255, 255, 0.06));
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .browser-id-label {
+          font-size: 0.8rem;
+          font-weight: 600;
           color: var(--secondary-text-color, #9e9e9e);
+        }
+
+        .browser-id-value {
+          font-size: 0.75rem;
           font-family: monospace;
-          font-size: 0.85rem;
+          color: var(--secondary-text-color, #9e9e9e);
+          opacity: 0.7;
         }
 
         /* ── Players List ── */
@@ -440,8 +421,20 @@ class SendspinBrowserPanel extends HTMLElement {
 
             <div class="card-row">
               <div class="row-text">
-                <span class="row-label">Register</span>
-                <span class="row-sub">Enable this browser as a player in Music Assistant</span>
+                <span class="row-label">Player Name</span>
+                <span class="row-sub">A friendly name for this browser device</span>
+              </div>
+            </div>
+            <div class="field-inline">
+              <input type="text" id="player-name" class="field-input"
+                placeholder="e.g. Living Room Tablet" autocomplete="off"
+                value="${this._playerName}" />
+            </div>
+
+            <div class="card-row">
+              <div class="row-text">
+                <span class="row-label">Register as Player</span>
+                <span class="row-sub">Enable this browser as a Sendspin player in Music Assistant</span>
               </div>
               <label class="toggle">
                 <input type="checkbox" id="register-toggle" ${this._registered ? "checked" : ""} />
@@ -449,21 +442,9 @@ class SendspinBrowserPanel extends HTMLElement {
               </label>
             </div>
 
-            <div id="register-fields" class="register-fields ${this._registered ? "" : "hidden"}">
-              <div class="field-group">
-                <label class="field-label" for="player-name">Player Name</label>
-                <span class="field-hint">A friendly name for this browser device.</span>
-                <input type="text" id="player-name" class="field-input"
-                  placeholder="e.g. Living Room Tablet" autocomplete="off"
-                  value="${this._playerName}" />
-              </div>
-
-              <div class="field-group">
-                <label class="field-label">Browser ID</label>
-                <span class="field-hint">A unique identifier for this browser-device combination.</span>
-                <input type="text" id="browser-id" class="field-input" readonly
-                  value="${this._playerId}" />
-              </div>
+            <div class="browser-id-row">
+              <span class="browser-id-label">Browser ID:</span>
+              <span class="browser-id-value">${this._playerId}</span>
             </div>
           </div>
 
