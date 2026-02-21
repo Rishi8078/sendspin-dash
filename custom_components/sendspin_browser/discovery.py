@@ -9,6 +9,7 @@ from typing import Any
 from homeassistant.components import zeroconf
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.http import HomeAssistantView
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from zeroconf import IPVersion, ServiceStateChange
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
 
@@ -124,5 +125,44 @@ class SendspinConfigView(HomeAssistantView):
             "entry_id": entry.entry_id,
         })
 
+
+class SendspinPlayersView(HomeAssistantView):
+    """API view to proxy player data from Music Assistant because of browser CORS restrictions."""
+
+    url = f"{STATIC_URL_PREFIX}/players"
+    name = f"api:{DOMAIN}:players"
+    requires_auth = True  # We want Auth here because the HA UI securely connects to it
+
+    async def get(self, request):
+        """Fetch all players from Music Assistant API and return the raw JSON."""
+        hass: HomeAssistant = request.app["hass"]
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if not entries:
+            return self.json([])
+
+        entry = entries[0]
+        opts = entry.options or {}
+        ma_url = (opts.get(CONF_MA_URL) or "").strip() or DEFAULT_MA_URL
+        token = (opts.get(CONF_MA_TOKEN) or "").strip()
+
+        session = async_get_clientsession(hass)
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        try:
+            async with session.post(
+                f"{ma_url}/api",
+                headers=headers,
+                json={"message_id": 1, "command": "players/all"},
+                timeout=5
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return self.json(data)
+                return self.json({"error": f"MA returned {resp.status}"}, status=resp.status)
+        except Exception as e:
+            _LOGGER.error("Failed to fetch players from MA: %s", e)
+            return self.json({"error": str(e)}, status=500)
 
 

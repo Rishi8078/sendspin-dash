@@ -44,8 +44,7 @@ if (wasRegistered) {
   registerFields.classList.remove("hidden");
 }
 
-let maUrl = "";
-let maToken = "";
+// No longer need maUrl or maToken here, as the proxy handles it.
 
 // ── Events ──
 
@@ -69,19 +68,8 @@ playerNameInput.addEventListener("input", () => {
 // ── Polling: Music Assistant API ──
 
 async function updatePlayersList() {
-  if (!maUrl) return;
-
   try {
-    const headers = { "Content-Type": "application/json" };
-    if (maToken) {
-      headers["Authorization"] = `Bearer ${maToken}`;
-    }
-
-    const res = await fetch(`${maUrl}/api`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ message_id: 1, command: "players/all" })
-    });
+    const res = await fetch("/api/sendspin_browser/players", { method: "GET" });
     if (!res.ok) return;
     const data = await res.json();
 
@@ -143,19 +131,6 @@ async function updatePlayersList() {
 }
 
 async function startPolling() {
-  try {
-    const res = await fetch(CONFIG_URL, { method: "GET" });
-    if (res.ok) {
-      const config = await res.json();
-      maUrl = config.ma_url;
-      maToken = config.ma_token;
-
-      if (maUrl && maUrl.endsWith('/')) {
-        maUrl = maUrl.slice(0, -1);
-      }
-    }
-  } catch (_) { }
-
   updatePlayersList();
   setInterval(updatePlayersList, 5000);
 }
