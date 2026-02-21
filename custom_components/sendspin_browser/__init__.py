@@ -1,4 +1,4 @@
-"""Sendspin Browser Player - turn the dashboard browser into a Sendspin player."""
+"""Sendspin Dash - turn the dashboard browser into a Sendspin player."""
 
 from __future__ import annotations
 
@@ -22,12 +22,12 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up the Sendspin Browser component (no config entry yet)."""
+    """Set up the Sendspin Dash component (no config entry yet)."""
     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
-    """Set up Sendspin Browser from a config entry."""
+    """Set up Sendspin Dash from a config entry."""
     hass.data.setdefault(DOMAIN, {})
     frontend_dir = Path(__file__).parent / "frontend"
 
@@ -56,7 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     async_register_built_in_panel(
         hass=hass,
         component_name="custom",
-        sidebar_title="Sendspin Player",
+        sidebar_title="Sendspin Dash",
         sidebar_icon="mdi:speaker-wireless",
         frontend_url_path=DOMAIN,
         require_admin=False,

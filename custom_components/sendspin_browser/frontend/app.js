@@ -1,6 +1,6 @@
 /**
- * Sendspin Browser — Settings Panel (app.js)
- * Displays registering configuration and active Sendspin browsers via the MA API.
+ * Sendspin Dash — Settings Panel (app.js)
+ * Displays registering configuration and active Sendspin players via the MA API.
  */
 
 const STORAGE_KEY_NAME = "sendspin-browser-player-name";

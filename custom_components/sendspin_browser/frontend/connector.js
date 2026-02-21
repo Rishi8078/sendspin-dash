@@ -107,7 +107,7 @@
           clientName: clientName,
           deviceInfo: {
             manufacturer: "Home Assistant",
-            product_name: "Sendspin Browser Panel",
+            product_name: "Sendspin Dash",
             software_version: "1.0.0"
           },
           onStateChange: function () { },

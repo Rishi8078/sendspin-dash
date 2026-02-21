@@ -1,4 +1,4 @@
-"""Config flow for Sendspin Browser."""
+"""Config flow for Sendspin Dash."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def _schema(user_input: dict | None) -> vol.Schema:
 
 
 class SendspinBrowserConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Sendspin Browser."""
+    """Handle a config flow for Sendspin Dash."""
 
     VERSION = 1
 
@@ -38,7 +38,7 @@ class SendspinBrowserConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the initial step."""
         if user_input is not None:
             return self.async_create_entry(
-                title="Sendspin Browser Player",
+                title="Sendspin Dash",
                 data={},
                 options={
                     CONF_MA_URL: (user_input.get(CONF_MA_URL) or "").strip(),
@@ -62,7 +62,7 @@ class SendspinBrowserConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class SendspinBrowserOptionsFlow(config_entries.OptionsFlow):
-    """Handle options for Sendspin Browser."""
+    """Handle options for Sendspin Dash."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""

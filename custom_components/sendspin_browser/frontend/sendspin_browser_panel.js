@@ -1,5 +1,5 @@
 /**
- * Sendspin Browser Player — Home Assistant Panel
+ * Sendspin Dash — Home Assistant Panel
  * Native LitElement Custom Element that inherits HA theme CSS variables.
  * No iframe needed — renders directly inside HA's Shadow DOM.
  */
@@ -412,7 +412,7 @@ class SendspinBrowserPanel extends HTMLElement {
         <ha-menu-button
           slot="navigationIcon"
         ></ha-menu-button>
-        <div slot="title">Sendspin Player</div>
+        <div slot="title">Sendspin Dash</div>
 
         <div class="content">
           <!-- ── This Browser ── -->

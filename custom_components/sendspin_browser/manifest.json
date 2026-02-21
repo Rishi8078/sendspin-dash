@@ -1,9 +1,13 @@
 {
   "domain": "sendspin_browser",
-  "name": "Sendspin Browser Player",
+  "name": "Sendspin Dash",
   "codeowners": [],
   "config_flow": true,
-  "dependencies": ["frontend", "http", "zeroconf"],
+  "dependencies": [
+    "frontend",
+    "http",
+    "zeroconf"
+  ],
   "documentation": "https://github.com/Sendspin-Protocol/sendspin-cli",
   "iot_class": "local_polling",
   "version": "1.0.0"

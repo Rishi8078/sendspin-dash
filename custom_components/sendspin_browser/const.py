@@ -1,4 +1,4 @@
-"""Constants for the Sendspin Browser integration."""
+"""Constants for the Sendspin Dash integration."""
 
 DOMAIN = "sendspin_browser"
 
