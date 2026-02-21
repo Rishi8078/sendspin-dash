@@ -11,11 +11,7 @@ const DISCOVERY_URL = "/api/sendspin_browser/servers";
 const elements = {
   connectCard: document.getElementById("connect-card"),
   playerNameInput: document.getElementById("player-name"),
-  serverUrlInput: document.getElementById("server-url"),
-  findServersBtn: document.getElementById("find-servers-btn"),
-  serversList: document.getElementById("servers-list"),
   connectError: document.getElementById("connect-error"),
-  discoveryHint: document.getElementById("discovery-hint"),
   connectBtn: document.getElementById("connect-btn"),
   registeredCard: document.getElementById("registered-card"),
   registeredName: document.getElementById("registered-name"),
@@ -54,8 +50,6 @@ function showError(msg) {
 function loadSavedSettings() {
   const params = getUrlParams();
   try {
-    const url = params.server_url || localStorage.getItem(STORAGE_KEY_URL) || "";
-    if (url) elements.serverUrlInput.value = url;
     const name = params.player_name || localStorage.getItem(STORAGE_KEY_NAME) || "";
     if (name) elements.playerNameInput.value = name;
   } catch (_) { }
@@ -93,44 +87,14 @@ function getOrCreatePlayerId() {
   }
 }
 
-async function findServers() {
-  elements.findServersBtn.disabled = true;
-  elements.serversList.classList.add("hidden");
-  elements.discoveryHint.classList.add("hidden");
-  showError("");
-  try {
-    const res = await fetch(DISCOVERY_URL, { method: "GET" });
-    if (!res.ok) throw new Error(`Discovery: ${res.status}`);
-    const servers = await res.json();
-    if (!Array.isArray(servers) || servers.length === 0) {
-      elements.discoveryHint.classList.remove("hidden");
-      return;
-    }
-    elements.serversList.innerHTML = "";
-    for (const s of servers) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "btn btn-ghost";
-      btn.textContent = s.name || s.url || "Server";
-      btn.title = s.url || "";
-      btn.addEventListener("click", () => {
-        elements.serverUrlInput.value = s.url || "";
-        elements.serversList.classList.add("hidden");
-      });
-      elements.serversList.appendChild(btn);
-    }
-    elements.serversList.classList.remove("hidden");
-  } catch (_) {
-    elements.discoveryHint.classList.remove("hidden");
-  } finally {
-    elements.findServersBtn.disabled = false;
-  }
-}
+
 
 async function connect() {
-  const baseUrl = normalizeBaseUrl(elements.serverUrlInput.value);
+  const params = getUrlParams();
+  const baseUrl = normalizeBaseUrl(params.server_url || localStorage.getItem(STORAGE_KEY_URL));
+
   if (!baseUrl) {
-    showError("Please enter a server URL (e.g. http://host:8927)");
+    showError("Server URL is missing. Please configure the Sendspin Browser integration in Home Assistant.");
     return;
   }
   showError("");
@@ -198,7 +162,8 @@ async function updateActivePlayers() {
     const cardElement = document.getElementById("active-players-card");
 
     if (activePlayers.length === 0) {
-      cardElement.classList.add("hidden");
+      listElement.innerHTML = '<div class="player-item-empty">No other connected dashboards found.</div>';
+      cardElement.classList.remove("hidden");
       return;
     }
 
@@ -240,8 +205,7 @@ async function updateActivePlayers() {
 loadSavedSettings();
 
 elements.connectBtn.addEventListener("click", connect);
-elements.serverUrlInput.addEventListener("keydown", (e) => { if (e.key === "Enter") connect(); });
-elements.findServersBtn.addEventListener("click", findServers);
+elements.playerNameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") connect(); });
 elements.disconnectBtn.addEventListener("click", disconnect);
 
 // Start polling for other active players

@@ -11,6 +11,7 @@
     const params = new URLSearchParams();
     if (serverUrl) params.set("server_url", serverUrl);
     if (playerName) params.set("player_name", playerName);
+    params.set("v", Date.now().toString()); // Cache busting
     const qs = params.toString();
     return qs ? PLAYER_HTML + "?" + qs : PLAYER_HTML;
   }

@@ -1,63 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sendspin Player</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <div class="app">
-      <header class="header">
-        <h1 class="logo">Sendspin</h1>
-        <span class="tagline">Register player</span>
-      </header>
 
-      <section id="connect-card" class="panel connect-panel">
-        <div class="connect-content">
-          <p class="connect-intro">Register this browser as a Sendspin player. Set server URL and player name here or in Integration options. Once set, the browser stays registered on every HA page (dashboard, etc.) so you don’t need to keep this panel open.</p>
-          <label for="player-name" class="connect-label">Player name</label>
-          <input type="text" id="player-name" class="connect-input" placeholder="e.g. Living Room Dashboard" autocomplete="off" />
-          <label for="server-url" class="connect-label">Server URL</label>
-          <div class="connect-row">
-            <input type="text" id="server-url" class="connect-input" placeholder="http://homeassistant.local:8927" autocomplete="url" />
-            <button id="find-servers-btn" class="btn btn-ghost" type="button" title="Find servers on network">Find</button>
-          </div>
-          <div id="servers-list" class="servers-list hidden"></div>
-          <p id="connect-error" class="error-msg hidden" role="alert"></p>
-          <p id="discovery-hint" class="hint hidden">No Sendspin servers found. Enter the server URL manually or set it in Integration options.</p>
-          <button id="connect-btn" class="btn btn-primary btn-connect">Register & connect</button>
-        </div>
-      </section>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sendspin Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
 
-      <section id="registered-card" class="panel registered-panel hidden">
-        <div class="registered-content">
-          <div class="registered-badge" aria-hidden="true"></div>
-          <p class="registered-title">Registered as player</p>
-          <p class="registered-name" id="registered-name">—</p>
-          <p class="registered-server" id="registered-server">—</p>
-          <p class="registered-hint">Control playback from Music Assistant or another controller. This browser stays registered as long as any Home Assistant tab is open (dashboard, etc.).</p>
-          <button id="disconnect-btn" class="btn btn-text">Disconnect</button>
-        </div>
-      </section>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 class="logo">Sendspin</h1>
+      <span class="tagline">Register player</span>
+    </header>
 
-      <section id="active-players-card" class="panel active-players-panel hidden">
-        <h2 class="active-players-title">Other Connected Dashboards</h2>
-        <div id="active-players-list" class="active-players-list">
-          <!-- Populated by JS -->
-        </div>
-      </section>
+    <section id="connect-card" class="panel connect-panel">
+      <div class="connect-content">
+        <p class="connect-intro">Register this browser as a Sendspin player. Set the Player Name here. The Server URL is
+          automatically inherited from your Home Assistant integration options.</p>
+        <label for="player-name" class="connect-label">Player name</label>
+        <input type="text" id="player-name" class="connect-input" placeholder="e.g. Living Room Dashboard"
+          autocomplete="off" />
+        <p id="connect-error" class="error-msg hidden" role="alert"></p>
+        <button id="connect-btn" class="btn btn-primary btn-connect">Register & connect</button>
+      </div>
+    </section>
 
-      <footer class="footer">
-        <a href="https://www.sendspin-audio.com" target="_blank" rel="noopener">Sendspin</a>
-        <span class="dot">·</span>
-        <a href="https://github.com/Sendspin-Protocol/sendspin-cli" target="_blank" rel="noopener">sendspin-cli</a>
-      </footer>
-    </div>
+    <section id="registered-card" class="panel registered-panel hidden">
+      <div class="registered-content">
+        <div class="registered-badge" aria-hidden="true"></div>
+        <p class="registered-title">Registered as player</p>
+        <p class="registered-name" id="registered-name">—</p>
+        <p class="registered-server" id="registered-server">—</p>
+        <p class="registered-hint">Control playback from Music Assistant or another controller. This browser stays
+          registered as long as any Home Assistant tab is open (dashboard, etc.).</p>
+        <button id="disconnect-btn" class="btn btn-text">Disconnect</button>
+      </div>
+    </section>
 
-    <script type="module" src="app.js"></script>
-  </body>
+    <section id="active-players-card" class="panel active-players-panel hidden">
+      <h2 class="active-players-title">Other Connected Dashboards</h2>
+      <div id="active-players-list" class="active-players-list">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <footer class="footer">
+      <a href="https://www.sendspin-audio.com" target="_blank" rel="noopener">Sendspin</a>
+      <span class="dot">·</span>
+      <a href="https://github.com/Sendspin-Protocol/sendspin-cli" target="_blank" rel="noopener">sendspin-cli</a>
+    </footer>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+
 </html>
