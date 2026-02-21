@@ -34,6 +34,7 @@
     constructor() {
       super();
       this._hass = null;
+      this._lastPlayerUrl = "";
       this.attachShadow({ mode: "open" });
       this.shadowRoot.appendChild(template.content.cloneNode(true));
       this._iframe = this.shadowRoot.getElementById("sendspin-iframe");
@@ -48,7 +49,11 @@
     set hass(hass) {
       this._hass = hass;
       var config = getConfig(hass);
-      this._iframe.src = buildPlayerUrl(config);
+      var url = buildPlayerUrl(config);
+      if (url !== this._lastPlayerUrl) {
+        this._lastPlayerUrl = url;
+        this._iframe.src = url;
+      }
     }
   }
 
