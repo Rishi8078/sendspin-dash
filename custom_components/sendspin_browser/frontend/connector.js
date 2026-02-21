@@ -85,6 +85,7 @@
 
     let player = null;
     let isConnecting = false;
+    let forceReconnect = false;
 
     const connectPlayer = async () => {
       let currentUrl = normalizeBaseUrl(localStorage.getItem(STORAGE_KEY_URL)) || serverUrl;
@@ -93,11 +94,12 @@
       if (isConnecting) return;
 
       if (player) {
-        if (player.isConnected && currentUrl === serverUrl && currentName === clientName) {
+        if (player.isConnected && !forceReconnect && currentUrl === serverUrl && currentName === clientName) {
           return; // Already connected, nothing to do
         }
         try { player.disconnect(); } catch (_) { }
         player = null;
+        forceReconnect = false;
       }
 
       serverUrl = currentUrl;
@@ -119,7 +121,7 @@
             software_version: "1.0.0"
           },
           onStateChange: function (state) {
-            // When MA sends a play command, ensure AudioContext is resumed (iOS fix)
+            // Resume suspended AudioContext on play (iOS fix)
             if (state === "playing" || state === "buffering") {
               try {
                 if (player && player.audioContext && player.audioContext.state === "suspended") {
@@ -127,6 +129,11 @@
                 }
               } catch (_) { }
             }
+          },
+          onDisconnected: function () {
+            // When the server drops us, null the player so the
+            // next poll cycle creates a fresh connection.
+            player = null;
           },
         });
         await player.connect();
