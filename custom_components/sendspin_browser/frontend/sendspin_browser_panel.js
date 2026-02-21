@@ -7,11 +7,13 @@
   const DEFAULT_PLAYER_NAME = "HA Browser";
   const PLAYER_HTML = "/api/sendspin_browser/player.html";
 
+  const CACHE_VER = Date.now().toString();
+
   function buildPlayerUrl(serverUrl, playerName) {
     const params = new URLSearchParams();
     if (serverUrl) params.set("server_url", serverUrl);
     if (playerName) params.set("player_name", playerName);
-    params.set("v", Date.now().toString()); // Cache busting
+    params.set("v", CACHE_VER); // Cache busting generated once per frame load
     const qs = params.toString();
     return qs ? PLAYER_HTML + "?" + qs : PLAYER_HTML;
   }
