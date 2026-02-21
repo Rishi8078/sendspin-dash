@@ -72,18 +72,22 @@ async function updatePlayersList() {
   if (!maUrl) return;
 
   try {
-    const headers = {};
+    const headers = { "Content-Type": "application/json" };
     if (maToken) {
       headers["Authorization"] = `Bearer ${maToken}`;
     }
 
-    const res = await fetch(`${maUrl}/api/players`, { method: "GET", headers });
+    const res = await fetch(`${maUrl}/api`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ message_id: 1, command: "players/all" })
+    });
     if (!res.ok) return;
     const data = await res.json();
 
     // Filter for our browsers
     const browsers = Object.values(data).filter(p =>
-      p.device_info && p.device_info.manufacturer === "Home Assistant"
+      p.player_id && p.player_id.startsWith("sendspin-browser-")
     );
 
     if (browsers.length === 0) {
