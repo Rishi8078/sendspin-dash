@@ -18,7 +18,7 @@
 
       <section id="connect-card" class="panel connect-panel">
         <div class="connect-content">
-          <p class="connect-intro">Register this browser tab as a Sendspin player. Use a name and server (e.g. Music Assistant on port 8927), then connect. Control playback from Music Assistant or another controller.</p>
+          <p class="connect-intro">Register this browser as a Sendspin player. Set server URL and player name here or in Integration options. Once set, the browser stays registered on every HA page (dashboard, etc.) so you don’t need to keep this panel open.</p>
           <label for="player-name" class="connect-label">Player name</label>
           <input type="text" id="player-name" class="connect-input" placeholder="e.g. Living Room Dashboard" autocomplete="off" />
           <label for="server-url" class="connect-label">Server URL</label>
@@ -39,7 +39,7 @@
           <p class="registered-title">Registered as player</p>
           <p class="registered-name" id="registered-name">—</p>
           <p class="registered-server" id="registered-server">—</p>
-          <p class="registered-hint">Control playback from Music Assistant or another controller. This tab stays connected as a player.</p>
+          <p class="registered-hint">Control playback from Music Assistant or another controller. This browser stays registered as long as any Home Assistant tab is open (dashboard, etc.).</p>
           <button id="disconnect-btn" class="btn btn-text">Disconnect</button>
         </div>
       </section>

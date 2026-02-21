@@ -6,6 +6,7 @@ CONF_SERVER_URL = "server_url"
 CONF_PLAYER_NAME = "player_name"
 
 DEFAULT_PLAYER_NAME = "Dashboard"
+DEFAULT_SERVER_URL = ""
 
 # URL path prefix for static assets (under /api/ so HA allows the request)
 STATIC_URL_PREFIX = f"/api/{DOMAIN}"

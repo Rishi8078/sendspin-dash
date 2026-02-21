@@ -12,7 +12,15 @@ from homeassistant.helpers.http import HomeAssistantView
 from zeroconf import IPVersion, ServiceStateChange
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
 
-from .const import DOMAIN, SENDSPIN_SERVER_TYPE, STATIC_URL_PREFIX
+from .const import (
+    CONF_PLAYER_NAME,
+    CONF_SERVER_URL,
+    DEFAULT_PLAYER_NAME,
+    DEFAULT_SERVER_URL,
+    DOMAIN,
+    SENDSPIN_SERVER_TYPE,
+    STATIC_URL_PREFIX,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -88,3 +96,23 @@ class SendspinDiscoveryView(HomeAssistantView):
                 _LOGGER.debug("Resolve %s.%s failed: %s", service_name, service_type, e)
 
         return self.json(servers)
+
+
+class SendspinConfigView(HomeAssistantView):
+    """API view to get integration options for the connector (server_url, player_name)."""
+
+    url = f"{STATIC_URL_PREFIX}/config"
+    name = f"api:{DOMAIN}:config"
+    requires_auth = True
+
+    async def get(self, request):
+        """Return JSON { server_url, player_name } from the first config entry."""
+        hass: HomeAssistant = request.app["hass"]
+        entries = hass.config_entries.async_entries(DOMAIN)
+        if not entries:
+            return self.json({"server_url": DEFAULT_SERVER_URL, "player_name": DEFAULT_PLAYER_NAME})
+        opts = entries[0].options or {}
+        return self.json({
+            "server_url": opts.get(CONF_SERVER_URL, DEFAULT_SERVER_URL) or DEFAULT_SERVER_URL,
+            "player_name": opts.get(CONF_PLAYER_NAME, DEFAULT_PLAYER_NAME) or DEFAULT_PLAYER_NAME,
+        })

@@ -5,13 +5,13 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from homeassistant.components.frontend import async_register_built_in_panel
+from homeassistant.components.frontend import add_extra_js_url, async_register_built_in_panel
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, STATIC_URL_PREFIX
-from .discovery import SendspinDiscoveryView
+from .discovery import SendspinConfigView, SendspinDiscoveryView
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     frontend_dir = Path(__file__).parent / "frontend"
 
     hass.http.register_view(SendspinDiscoveryView())
+    hass.http.register_view(SendspinConfigView())
 
     # Serve frontend (player HTML/JS/CSS + panel script) at /sendspin_browser/*
     await hass.http.async_register_static_paths(
@@ -38,6 +39,11 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             )
         ]
     )
+
+    # Connector runs on every HA page (like browser_mod) so the browser stays registered
+    # as a Sendspin player even when the custom panel is closed.
+    connector_url = f"{STATIC_URL_PREFIX}/connector.js"
+    add_extra_js_url(hass, connector_url)
 
     panel_url = f"{STATIC_URL_PREFIX}/sendspin_browser_panel.js"
     async_register_built_in_panel(
