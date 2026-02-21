@@ -7,6 +7,8 @@
 (function () {
   const CONFIG_URL = "/api/sendspin_browser/config";
   const STORAGE_KEY_PLAYER_ID = "sendspin-browser-player-id";
+  const STORAGE_KEY_URL = "sendspin-browser-player-last-url";
+  const STORAGE_KEY_NAME = "sendspin-browser-player-name";
 
   function getOrCreatePlayerId() {
     try {
@@ -36,41 +38,71 @@
     var path = typeof window !== "undefined" && window.location && window.location.pathname;
     if (path && (path.indexOf("/auth/") !== -1 || path === "/auth")) return;
 
-    let config;
+    let config = {};
     try {
       const res = await fetch(CONFIG_URL, { method: "GET", credentials: "same-origin" });
-      if (!res.ok) return;
-      config = await res.json();
-    } catch (_) {
-      return;
+      if (res.ok) {
+        config = await res.json();
+      }
+    } catch (_) {}
+
+    let serverUrl = normalizeBaseUrl(config.server_url);
+    if (!serverUrl) {
+      serverUrl = normalizeBaseUrl(localStorage.getItem(STORAGE_KEY_URL));
     }
-    const serverUrl = normalizeBaseUrl(config.server_url);
     if (!serverUrl) return;
 
     const playerId = getOrCreatePlayerId();
-    // Auto-register like browser_mod: stable ID + friendly name
-    const clientName = "HA Browser";
-
-    try {
-      const { SendspinPlayer } = await import(
-        "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
-      );
-      const player = new SendspinPlayer({
-        baseUrl: serverUrl,
-        playerId,
-        clientName: clientName,
-        onStateChange: function () {},
-      });
-      await player.connect();
-      // Keep connection open; no UI. If tab closes, connection drops (expected).
-      window.addEventListener("beforeunload", function () {
-        try {
-          player.disconnect();
-        } catch (_) {}
-      });
-    } catch (_) {
-      // Connection failed (server down, etc.); silent.
+    let clientName = config.player_name;
+    if (!clientName || !clientName.trim()) {
+      clientName = localStorage.getItem(STORAGE_KEY_NAME);
     }
+    if (!clientName || !clientName.trim()) {
+      clientName = "HA Browser";
+    }
+
+    // Unlock browser audio autoplay on first interaction
+    const unlockAudio = () => {
+      try {
+        const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+        audio.play().catch(() => {});
+      } catch (_) {}
+      ["click", "touchstart", "keydown"].forEach(e => document.removeEventListener(e, unlockAudio));
+    };
+    ["click", "touchstart", "keydown"].forEach(e => document.addEventListener(e, unlockAudio, { once: true }));
+
+    let player = null;
+    let isConnecting = false;
+
+    const connectPlayer = async () => {
+      if (isConnecting || (player && player.isConnected)) return;
+      isConnecting = true;
+      try {
+        const { SendspinPlayer } = await import(
+          "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
+        );
+        player = new SendspinPlayer({
+          baseUrl: serverUrl,
+          playerId,
+          clientName: clientName,
+          onStateChange: function () {},
+        });
+        await player.connect();
+        
+        window.addEventListener("beforeunload", function () {
+          try {
+            if (player) player.disconnect();
+          } catch (_) {}
+        });
+      } catch (_) {
+        player = null;
+      } finally {
+        isConnecting = false;
+      }
+    };
+
+    await connectPlayer();
+    setInterval(connectPlayer, 5000);
   }
 
   run();
