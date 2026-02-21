@@ -111,24 +111,32 @@
         const { SendspinPlayer } = await import(
           "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
         );
+
+        // --- iOS Autoplay Fix ---
+        // The Sendspin SDK internally bridges the Web Audio API to an HTML5 <audio> element.
+        // On stream end (pause/skip), it calls .pause() on that element. 
+        // On iOS, pausing the element drops the audio session. When a remote play command
+        // arrives later via WebSocket, iOS blocks the subsequent .play() call because it
+        // lacks a user gesture. 
+        // FIX: We provide our own audio element and intercept .pause() to do nothing. 
+        // The element keeps "playing" the empty MediaStream, retaining the iOS audio session!
+        const autoPlayAudioElement = document.createElement("audio");
+        autoPlayAudioElement.style.display = "none";
+        document.body.appendChild(autoPlayAudioElement);
+
+        autoPlayAudioElement.pause = function () {
+          // Do nothing! Keeps the iOS background audio session alive
+        };
+
         player = new SendspinPlayer({
           baseUrl: serverUrl,
           playerId,
           clientName: clientName,
+          audioElement: autoPlayAudioElement,
           deviceInfo: {
             manufacturer: "Home Assistant",
             product_name: "Sendspin Dash",
             software_version: "1.0.0"
-          },
-          onStateChange: function (state) {
-            // Resume suspended AudioContext on play (iOS fix)
-            if (state === "playing" || state === "buffering") {
-              try {
-                if (player && player.audioContext && player.audioContext.state === "suspended") {
-                  player.audioContext.resume().catch(() => { });
-                }
-              } catch (_) { }
-            }
           },
           onDisconnected: function () {
             // When the server drops us, null the player so the
@@ -137,6 +145,30 @@
           },
         });
         await player.connect();
+
+        // --- SPEC WORKAROUNDS ---
+
+        // 1. Group Volume Algorithm Infinite Loop Prevention
+        // The spec's group volume calculation splits "lost delta" equally. Fractional 
+        // volume values can cause an infinite loop during grouping in some servers.
+        // We enforce strict integer rounding before sending volume updates.
+        const originalSetVolume = player.setVolume.bind(player);
+        player.setVolume = function (volume) {
+          originalSetVolume(Math.round(volume));
+        };
+
+        // 2. TCP Half-Close / TIME_WAIT Prevention
+        // The spec dictates that after sending client/goodbye, the server should 
+        // close the connection. However, if the server drops offline or hangs, 
+        // the client connection can stay in an indefinite half-open state.
+        const originalDisconnect = player.disconnect.bind(player);
+        player.disconnect = function (reason) {
+          originalDisconnect(reason);
+          // Force close the underlying WebSocket immediately to avoid hanging
+          if (player.wsManager && player.wsManager.ws) {
+            try { player.wsManager.ws.close(); } catch (_) { }
+          }
+        };
 
         window.addEventListener("beforeunload", function () {
           try { if (player) player.disconnect(); } catch (_) { }
