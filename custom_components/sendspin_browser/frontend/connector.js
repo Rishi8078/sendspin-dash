@@ -73,6 +73,7 @@
     ["click", "touchstart", "keydown"].forEach(e => document.addEventListener(e, unlockAudio, { once: true }));
 
     let player = null;
+    let isConnecting = false;
     const runBackgroundPlayer = () => {
       const connectPlayer = async () => {
         let currentUrl = normalizeBaseUrl(localStorage.getItem(STORAGE_KEY_URL)) || serverUrl;
@@ -82,6 +83,14 @@
 
         if (player) {
           if (player.isConnected && currentUrl === serverUrl && currentName === clientName) {
+            // Already connected — just ping HA to stay registered
+            try {
+              fetch(PING_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ player_id: playerId, name: clientName })
+              });
+            } catch (_) { }
             return;
           }
           try { player.disconnect(); } catch (_) { }
