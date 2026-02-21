@@ -58,19 +58,19 @@ function loadSavedSettings() {
     if (url) elements.serverUrlInput.value = url;
     const name = params.player_name || localStorage.getItem(STORAGE_KEY_NAME) || "";
     if (name) elements.playerNameInput.value = name;
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function saveLastUrl(url) {
   try {
     if (url) localStorage.setItem(STORAGE_KEY_URL, url);
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function savePlayerName(name) {
   try {
     if (name) localStorage.setItem(STORAGE_KEY_NAME, name);
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function getPlayerName() {
@@ -145,7 +145,7 @@ async function connect() {
       baseUrl,
       playerId,
       clientName: clientName || undefined,
-      onStateChange: () => {},
+      onStateChange: () => { },
     });
     await player.connect();
     saveLastUrl(baseUrl);
@@ -186,3 +186,10 @@ elements.connectBtn.addEventListener("click", connect);
 elements.serverUrlInput.addEventListener("keydown", (e) => { if (e.key === "Enter") connect(); });
 elements.findServersBtn.addEventListener("click", findServers);
 elements.disconnectBtn.addEventListener("click", disconnect);
+
+try {
+  const bc = new BroadcastChannel('sendspin-browser-sync');
+  setInterval(() => bc.postMessage('panel_active'), 2000);
+  bc.postMessage('panel_active');
+  window.addEventListener("beforeunload", () => bc.postMessage('panel_inactive'));
+} catch (_) { }

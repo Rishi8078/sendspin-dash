@@ -44,7 +44,7 @@
       if (res.ok) {
         config = await res.json();
       }
-    } catch (_) {}
+    } catch (_) { }
 
     let serverUrl = normalizeBaseUrl(config.server_url);
     if (!serverUrl) {
@@ -65,44 +65,89 @@
     const unlockAudio = () => {
       try {
         const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
-        audio.play().catch(() => {});
-      } catch (_) {}
+        audio.play().catch(() => { });
+      } catch (_) { }
       ["click", "touchstart", "keydown"].forEach(e => document.removeEventListener(e, unlockAudio));
     };
     ["click", "touchstart", "keydown"].forEach(e => document.addEventListener(e, unlockAudio, { once: true }));
 
     let player = null;
     let isConnecting = false;
+    let panelIsActiveGlobally = false;
 
-    const connectPlayer = async () => {
-      if (isConnecting || (player && player.isConnected)) return;
-      isConnecting = true;
-      try {
-        const { SendspinPlayer } = await import(
-          "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
-        );
-        player = new SendspinPlayer({
-          baseUrl: serverUrl,
-          playerId,
-          clientName: clientName,
-          onStateChange: function () {},
-        });
-        await player.connect();
-        
-        window.addEventListener("beforeunload", function () {
-          try {
-            if (player) player.disconnect();
-          } catch (_) {}
-        });
-      } catch (_) {
-        player = null;
-      } finally {
-        isConnecting = false;
-      }
+    try {
+      const bc = new BroadcastChannel('sendspin-browser-sync');
+      bc.onmessage = (e) => {
+        if (e.data === 'panel_active') panelIsActiveGlobally = true;
+        if (e.data === 'panel_inactive') panelIsActiveGlobally = false;
+      };
+      setInterval(() => { panelIsActiveGlobally = false; }, 6000);
+    } catch (_) { }
+
+    const runBackgroundPlayer = () => {
+      const connectPlayer = async () => {
+        let currentUrl = normalizeBaseUrl(localStorage.getItem(STORAGE_KEY_URL)) || serverUrl;
+        let currentName = localStorage.getItem(STORAGE_KEY_NAME) || clientName;
+
+        const panelIsActiveLocally = !!document.querySelector("sendspin-browser-panel");
+
+        if (panelIsActiveLocally || panelIsActiveGlobally) {
+          if (player) {
+            try { player.disconnect(); } catch (_) { }
+            player = null;
+          }
+          return;
+        }
+
+        if (isConnecting) return;
+
+        if (player) {
+          if (player.isConnected && currentUrl === serverUrl && currentName === clientName) {
+            return;
+          }
+          try { player.disconnect(); } catch (_) { }
+          player = null;
+        }
+
+        serverUrl = currentUrl;
+        clientName = currentName;
+        if (!serverUrl) return;
+
+        isConnecting = true;
+        try {
+          const { SendspinPlayer } = await import(
+            "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
+          );
+          player = new SendspinPlayer({
+            baseUrl: serverUrl,
+            playerId,
+            clientName: clientName,
+            onStateChange: function () { },
+          });
+          await player.connect();
+
+          window.addEventListener("beforeunload", function () {
+            try { if (player) player.disconnect(); } catch (_) { }
+          });
+        } catch (_) {
+          player = null;
+        } finally {
+          isConnecting = false;
+        }
+      };
+
+      connectPlayer();
+      setInterval(connectPlayer, 5000);
     };
 
-    await connectPlayer();
-    setInterval(connectPlayer, 5000);
+    if (typeof navigator !== "undefined" && navigator.locks) {
+      navigator.locks.request("sendspin-browser-player", () => {
+        runBackgroundPlayer();
+        return new Promise(() => { });
+      }).catch(() => { });
+    } else {
+      runBackgroundPlayer();
+    }
   }
 
   run();
