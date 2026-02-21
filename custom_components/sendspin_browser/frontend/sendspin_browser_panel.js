@@ -34,12 +34,15 @@
     constructor() {
       super();
       this._hass = null;
-      this.style.display = "block";
-      this.style.height = "100%";
-      this.style.minHeight = "100%";
       this.attachShadow({ mode: "open" });
       this.shadowRoot.appendChild(template.content.cloneNode(true));
       this._iframe = this.shadowRoot.getElementById("sendspin-iframe");
+    }
+
+    connectedCallback() {
+      this.style.display = "block";
+      this.style.height = "100%";
+      this.style.minHeight = "100%";
     }
 
     set hass(hass) {
