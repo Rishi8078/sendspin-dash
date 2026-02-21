@@ -1,5 +1,6 @@
 {
-  "name": "SendSpin Player",
-  "homeassistant": "2023.12.0",
+  "name": "Sendspin Browser Player",
+  "content_in_root": false,
+  "filename": "sendspin_browser",
   "render_readme": true
 }

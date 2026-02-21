@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sendspin Browser Player",
+        "description": "This integration turns the dashboard browser tab into a Sendspin player. Configure default values (optional).",
+        "data": {
+          "server_url": "Default Sendspin server URL",
+          "player_name": "Default player name"
+        },
+        "data_description": {
+          "server_url": "e.g. http://homeassistant.local:8095 (Music Assistant) or leave empty to set in the panel.",
+          "player_name": "Name shown for this player on the Sendspin server (e.g. \"Living Room Dashboard\")."
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Integration is already configured."
+    },
+    "error": {}
+  }
+}

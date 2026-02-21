@@ -1,33 +1,27 @@
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-yarn.lock
+# Sendspin CLI (not part of sendspin-dash)
+sendspin-cli/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Build artifacts
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
 dist/
 build/
-*.pyc
-__pycache__/
-*.egg-info/
-.pytest_cache/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Home Assistant
-config/
-.homeassistant/
-
-# Environment
-.env
-.env.local
-
-js_client/src/main.ts.bak
+*.log
