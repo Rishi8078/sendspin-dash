@@ -5,13 +5,26 @@
 (function () {
   const SERVERS_URL = "/api/sendspin_browser/servers";
 
+  // #region agent log
+  function _dbg(payload) {
+    var body = Object.assign({ sessionId: "5756f4", timestamp: Date.now(), location: "sendspin_browser_panel.js", runId: payload.runId || "run1", hypothesisId: payload.hypothesisId }, payload);
+    fetch("http://127.0.0.1:7244/ingest/816d7f5c-57f4-4a63-8527-a1e79b7b36b8", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "5756f4" }, body: JSON.stringify(body) }).catch(function () {});
+  }
+  // #endregion
+
   function getConfigFromHass(hass) {
+    // #region agent log
+    _dbg({ hypothesisId: "H2", message: "getConfigFromHass entry", data: { hasHass: !!hass, hasConfigEntries: !!(hass && hass.config_entries), hasEntries: !!(hass && hass.config_entries && hass.config_entries.entries), entriesType: hass && hass.config_entries ? typeof hass.config_entries.entries : "n/a", entriesLength: (hass && hass.config_entries && hass.config_entries.entries) ? hass.config_entries.entries.length : 0, configEntriesKeys: hass && hass.config_entries ? Object.keys(hass.config_entries) : [] } });
+    // #endregion
     if (!hass || !hass.config_entries || !hass.config_entries.entries) {
       return { server_url: "", player_name: "Dashboard", entry_id: null };
     }
     const entry = hass.config_entries.entries.find(function (e) {
       return e.domain === "sendspin_browser";
     });
+    // #region agent log
+    _dbg({ hypothesisId: "H4", message: "getConfigFromHass entry found", data: { found: !!entry, entryId: entry ? entry.entry_id : null, entryKeys: entry ? Object.keys(entry) : [], optionsKeys: entry && entry.options ? Object.keys(entry.options) : [], server_url: entry && entry.options ? entry.options.server_url : "n/a" } });
+    // #endregion
     const opts = (entry && entry.options) || {};
     return {
       server_url: opts.server_url || "",
@@ -31,19 +44,31 @@
     }
 
     connectedCallback() {
+      // #region agent log
+      _dbg({ hypothesisId: "H3", message: "connectedCallback", data: { hasHass: !!this._hass, panelKeys: this.panel ? Object.keys(this.panel) : "no panel" } });
+      // #endregion
       this.style.display = "block";
       this.style.height = "100%";
       this.style.minHeight = "100%";
     }
 
     set hass(hass) {
+      // #region agent log
+      _dbg({ hypothesisId: "H1", message: "hass setter called", data: { hasHass: !!hass, hassKeys: hass ? Object.keys(hass).slice(0, 30) : [] } });
+      // #endregion
       this._hass = hass;
       this._config = getConfigFromHass(hass);
+      // #region agent log
+      _dbg({ hypothesisId: "H5", message: "config before _render", data: { server_url: this._config.server_url, player_name: this._config.player_name, entry_id: this._config.entry_id } });
+      // #endregion
       this._render();
     }
 
     _render() {
       const root = this.shadowRoot;
+      // #region agent log
+      _dbg({ hypothesisId: "H5", message: "_render called", data: { hasRoot: !!root, configured: !!(this._config && this._config.server_url && this._config.server_url.trim()), config: this._config } });
+      // #endregion
       if (!root) return;
 
       const configured = !!(this._config.server_url && this._config.server_url.trim());
