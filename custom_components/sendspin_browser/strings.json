@@ -9,7 +9,7 @@
           "player_name": "Default player name"
         },
         "data_description": {
-          "server_url": "e.g. http://homeassistant.local:8095 (Music Assistant) or leave empty to set in the panel.",
+          "server_url": "e.g. http://homeassistant.local:8927 (Music Assistant) or leave empty to set in the panel.",
           "player_name": "Name shown for this player on the Sendspin server (e.g. \"Living Room Dashboard\")."
         }
       }

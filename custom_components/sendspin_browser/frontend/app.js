@@ -1,12 +1,11 @@
 /**
  * Sendspin Browser Player (Home Assistant panel).
- * Same logic as standalone browser-player; prefills from URL params (from HA config).
+ * Register this tab as a Sendspin player; control playback from Music Assistant or another controller.
  */
 
 const STORAGE_KEY_URL = "sendspin-browser-player-last-url";
 const STORAGE_KEY_NAME = "sendspin-browser-player-name";
 const STORAGE_KEY_PLAYER_ID = "sendspin-browser-player-id";
-// Use the integration's discovery API (mDNS via Home Assistant); same origin when in panel
 const DISCOVERY_URL = "/api/sendspin_browser/servers";
 
 const elements = {
@@ -18,33 +17,14 @@ const elements = {
   connectError: document.getElementById("connect-error"),
   discoveryHint: document.getElementById("discovery-hint"),
   connectBtn: document.getElementById("connect-btn"),
-  playerCard: document.getElementById("player-card"),
-  nowPlayingTitle: document.getElementById("now-playing-title"),
-  nowPlayingArtist: document.getElementById("now-playing-artist"),
-  progressRange: document.getElementById("progress-range"),
-  timeCurrent: document.getElementById("time-current"),
-  timeTotal: document.getElementById("time-total"),
-  btnPrev: document.getElementById("btn-prev"),
-  btnPlayPause: document.getElementById("btn-play-pause"),
-  btnNext: document.getElementById("btn-next"),
-  muteBtn: document.getElementById("mute-btn"),
-  iconVolume: document.getElementById("icon-volume"),
-  iconMuted: document.getElementById("icon-muted"),
-  iconPlay: document.querySelector("#btn-play-pause .icon-play"),
-  iconPause: document.querySelector("#btn-play-pause .icon-pause"),
-  volumeSlider: document.getElementById("volume-slider"),
-  syncStatus: document.getElementById("sync-status"),
+  registeredCard: document.getElementById("registered-card"),
+  registeredName: document.getElementById("registered-name"),
+  registeredServer: document.getElementById("registered-server"),
   disconnectBtn: document.getElementById("disconnect-btn"),
 };
 
 let player = null;
-let syncUpdateInterval = null;
-let progressUpdateInterval = null;
-let supportedCommands = [];
-let isPlaying = false;
-let lastPositionMs = 0;
-let lastDurationMs = 0;
-let lastProgressUpdate = 0;
+let connectionCheckInterval = null;
 
 const sdkImport = import(
   "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
@@ -56,14 +36,6 @@ function getUrlParams() {
     server_url: p.get("server_url") || "",
     player_name: p.get("player_name") || "",
   };
-}
-
-function formatTime(ms) {
-  if (ms == null || !Number.isFinite(ms) || ms < 0) return "0:00";
-  const totalSec = Math.floor(ms / 1000);
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function normalizeBaseUrl(input) {
@@ -121,69 +93,6 @@ function getOrCreatePlayerId() {
   }
 }
 
-function setNowPlaying(title, artist) {
-  elements.nowPlayingTitle.textContent = title || "—";
-  elements.nowPlayingArtist.textContent = artist || "—";
-}
-
-function setPlayPauseIcon(playing) {
-  isPlaying = playing;
-  if (elements.iconPlay && elements.iconPause) {
-    elements.iconPlay.classList.toggle("hidden", playing);
-    elements.iconPause.classList.toggle("hidden", !playing);
-  }
-  elements.btnPlayPause.setAttribute("title", playing ? "Pause" : "Play");
-  elements.btnPlayPause.setAttribute("aria-label", playing ? "Pause" : "Play");
-}
-
-function updateTimeline(positionMs, durationMs) {
-  lastPositionMs = positionMs;
-  lastDurationMs = durationMs;
-  lastProgressUpdate = Date.now();
-  elements.timeCurrent.textContent = formatTime(positionMs);
-  elements.timeTotal.textContent = formatTime(durationMs);
-  if (durationMs > 0) {
-    const pct = Math.min(100, (positionMs / durationMs) * 100);
-    elements.progressRange.value = String(Math.round((pct / 100) * 1000));
-  } else {
-    elements.progressRange.value = "0";
-  }
-}
-
-function tickProgress() {
-  if (!isPlaying || lastDurationMs <= 0) return;
-  const elapsed = Date.now() - lastProgressUpdate;
-  const newPos = Math.min(lastPositionMs + elapsed, lastDurationMs);
-  lastPositionMs = newPos;
-  lastProgressUpdate = Date.now();
-  elements.timeCurrent.textContent = formatTime(newPos);
-  const pct = (newPos / lastDurationMs) * 100;
-  elements.progressRange.value = String(Math.round((pct / 100) * 1000));
-}
-
-function updateTransportState(state) {
-  if (!state) return;
-  const meta = state.serverState?.metadata;
-  if (meta) {
-    setNowPlaying(meta.title ?? null, meta.artist ?? null);
-    const progress = meta.progress;
-    if (progress) {
-      const pos = progress.position_ms ?? progress.track_progress;
-      const dur = progress.duration_ms ?? progress.track_duration;
-      if (pos != null && dur != null) updateTimeline(pos, dur);
-    }
-  }
-  const group = state.groupState;
-  if (group?.playback_state) setPlayPauseIcon(group.playback_state === "playing");
-  const cmds = state.serverState?.controller?.supported_commands;
-  if (Array.isArray(cmds)) {
-    supportedCommands = cmds;
-    elements.btnPrev.disabled = !cmds.includes("previous");
-    elements.btnNext.disabled = !cmds.includes("next");
-    elements.btnPlayPause.disabled = !cmds.includes("play") && !cmds.includes("pause");
-  }
-}
-
 async function findServers() {
   elements.findServersBtn.disabled = true;
   elements.serversList.classList.add("hidden");
@@ -221,7 +130,7 @@ async function findServers() {
 async function connect() {
   const baseUrl = normalizeBaseUrl(elements.serverUrlInput.value);
   if (!baseUrl) {
-    showError("Please enter a server URL (e.g. http://host:port)");
+    showError("Please enter a server URL (e.g. http://host:8927)");
     return;
   }
   showError("");
@@ -236,68 +145,38 @@ async function connect() {
       baseUrl,
       playerId,
       clientName: clientName || undefined,
-      onStateChange: updateTransportState,
+      onStateChange: () => {},
     });
     await player.connect();
     saveLastUrl(baseUrl);
-    setNowPlaying(null, null);
-    setPlayPauseIcon(false);
-    updateTimeline(0, 0);
-    supportedCommands = [];
-    elements.btnPrev.disabled = false;
-    elements.btnNext.disabled = false;
-    elements.btnPlayPause.disabled = false;
-    elements.volumeSlider.value = player.volume;
-    setMuteIcon(player.muted);
+    elements.registeredName.textContent = clientName || "Browser player";
+    elements.registeredServer.textContent = baseUrl;
     elements.connectCard.classList.add("hidden");
-    elements.playerCard.classList.remove("hidden");
-    syncUpdateInterval = setInterval(updateSyncStatus, 500);
-    progressUpdateInterval = setInterval(tickProgress, 500);
+    elements.registeredCard.classList.remove("hidden");
+    connectionCheckInterval = setInterval(() => {
+      if (player && !player.isConnected) disconnect();
+    }, 2000);
   } catch (err) {
     console.error("Connection failed:", err);
     showError(err?.message || "Connection failed");
     player = null;
   } finally {
     elements.connectBtn.disabled = false;
-    elements.connectBtn.textContent = "Connect";
-  }
-}
-
-function setMuteIcon(muted) {
-  if (elements.iconVolume && elements.iconMuted) {
-    elements.iconVolume.classList.toggle("hidden", muted);
-    elements.iconMuted.classList.toggle("hidden", !muted);
-  }
-}
-
-function updateSyncStatus() {
-  if (!player) return;
-  if (!player.isConnected) {
-    disconnect();
-    return;
-  }
-  const syncInfo = player.syncInfo;
-  if (syncInfo?.syncErrorMs !== undefined) {
-    elements.syncStatus.textContent = `Sync: ${syncInfo.syncErrorMs.toFixed(1)}ms`;
-    elements.syncStatus.classList.toggle("synced", Math.abs(syncInfo.syncErrorMs) < 10);
+    elements.connectBtn.textContent = "Register & connect";
   }
 }
 
 function disconnect() {
-  if (syncUpdateInterval) clearInterval(syncUpdateInterval);
-  syncUpdateInterval = null;
-  if (progressUpdateInterval) clearInterval(progressUpdateInterval);
-  progressUpdateInterval = null;
+  if (connectionCheckInterval) {
+    clearInterval(connectionCheckInterval);
+    connectionCheckInterval = null;
+  }
   if (player) {
     player.disconnect();
     player = null;
   }
-  elements.playerCard.classList.add("hidden");
+  elements.registeredCard.classList.add("hidden");
   elements.connectCard.classList.remove("hidden");
-  elements.syncStatus.textContent = "—";
-  elements.syncStatus.classList.remove("synced");
-  setNowPlaying("—", "—");
-  updateTimeline(0, 0);
   showError("");
 }
 
@@ -307,8 +186,3 @@ elements.connectBtn.addEventListener("click", connect);
 elements.serverUrlInput.addEventListener("keydown", (e) => { if (e.key === "Enter") connect(); });
 elements.findServersBtn.addEventListener("click", findServers);
 elements.disconnectBtn.addEventListener("click", disconnect);
-elements.btnPrev.addEventListener("click", () => { if (player && supportedCommands.includes("previous")) try { player.sendCommand("previous"); } catch (_) {} });
-elements.btnPlayPause.addEventListener("click", () => { if (!player) return; try { if (isPlaying) player.sendCommand("pause"); else player.sendCommand("play"); } catch (_) {} });
-elements.btnNext.addEventListener("click", () => { if (player && supportedCommands.includes("next")) try { player.sendCommand("next"); } catch (_) {} });
-elements.muteBtn.addEventListener("click", () => { if (!player) return; const m = !player.muted; player.setMuted(m); setMuteIcon(m); });
-elements.volumeSlider.addEventListener("input", () => { if (player) player.setVolume(parseInt(elements.volumeSlider.value, 10)); });

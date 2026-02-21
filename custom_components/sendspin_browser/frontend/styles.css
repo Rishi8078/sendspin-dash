@@ -1,4 +1,4 @@
-/* Sendspin Browser Player — modern UI */
+/* Sendspin Browser — Register player (browse-style) */
 
 :root {
   --bg: #0a0a0c;
@@ -11,7 +11,6 @@
   --accent-hover: #00e6b8;
   --accent-dim: rgba(0, 212, 170, 0.2);
   --danger: #ef4444;
-  --danger-hover: #dc2626;
   --success: #22c55e;
   --radius: 16px;
   --radius-sm: 10px;
@@ -63,6 +62,7 @@ body {
 }
 
 .connect-panel .connect-content { display: flex; flex-direction: column; gap: 16px; }
+.connect-intro { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 4px; }
 .connect-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.04em; }
 .connect-row { display: flex; gap: 10px; align-items: center; }
 .connect-input {
@@ -85,7 +85,6 @@ body {
 .servers-list .btn { flex: 0 0 auto; }
 .error-msg { font-size: 0.85rem; color: var(--danger); }
 .hint { font-size: 0.8rem; color: var(--text-muted); }
-.hint code { font-size: 0.75rem; padding: 2px 6px; background: var(--surface-elevated); border-radius: 6px; color: var(--text-muted); }
 
 .btn { font-family: inherit; font-weight: 500; cursor: pointer; border: none; border-radius: var(--radius-sm); transition: background 0.2s, color 0.2s, opacity 0.2s; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -94,52 +93,47 @@ body {
 .btn-connect { width: 100%; font-weight: 600; }
 .btn-ghost { background: var(--surface-elevated); color: var(--text-muted); font-size: 0.85rem; height: 48px; padding: 0 16px; }
 .btn-ghost:hover:not(:disabled) { color: var(--text); background: rgba(255, 255, 255, 0.06); }
-.btn-text { background: transparent; color: var(--text-muted); font-size: 0.85rem; padding: 6px 12px; }
+.btn-text { background: transparent; color: var(--text-muted); font-size: 0.85rem; padding: 8px 12px; margin-top: 8px; }
 .btn-text:hover:not(:disabled) { color: var(--danger); }
-.btn-icon { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--text-muted); }
-.btn-icon:hover:not(:disabled) { color: var(--text); }
-.btn-icon .icon { width: 22px; height: 22px; }
-.btn-transport { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; background: var(--surface-elevated); color: var(--text); border-radius: 50%; }
-.btn-transport:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); color: var(--accent); }
-.btn-transport .icon { width: 24px; height: 24px; }
-.btn-play-pause { width: 56px; height: 56px; background: var(--accent); color: var(--bg); }
-.btn-play-pause:hover:not(:disabled) { background: var(--accent-hover); color: var(--bg); }
-.btn-play-pause .icon { width: 28px; height: 28px; }
 
-.player-panel .player-content { display: flex; flex-direction: column; gap: 24px; }
-.now-playing { display: flex; gap: 16px; align-items: center; }
-.now-playing-artwork { width: 80px; height: 80px; min-width: 80px; border-radius: 12px; background: linear-gradient(145deg, var(--surface-elevated) 0%, var(--accent-dim) 100%); }
-.now-playing-info { min-width: 0; flex: 1; }
-.now-playing-title { font-size: 1.1rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.now-playing-artist { font-size: 0.9rem; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-.timeline { display: flex; flex-direction: column; gap: 6px; }
-.progress-range {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  height: 6px;
-  background: var(--surface-elevated);
-  border-radius: 3px;
-  outline: none;
-  accent-color: var(--accent);
+/* Registered (post-connect) panel */
+.registered-panel .registered-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
 }
-.progress-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; cursor: pointer; margin-top: -4px; transition: transform 0.15s; }
-.progress-range::-webkit-slider-thumb:hover { transform: scale(1.15); }
-.progress-range::-moz-range-thumb { width: 14px; height: 14px; background: var(--accent); border: none; border-radius: 50%; cursor: pointer; }
-.timeline-labels { display: flex; justify-content: space-between; font-size: 0.75rem; font-variant-numeric: tabular-nums; color: var(--text-muted); }
-.time-label { min-width: 2.5em; }
-
-.transport { display: flex; align-items: center; justify-content: center; gap: 16px; }
-
-.secondary-controls { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
-.volume-row { display: flex; align-items: center; gap: 12px; }
-.volume-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 5px; background: var(--surface-elevated); border-radius: 3px; outline: none; }
-.volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--text-muted); border-radius: 50%; cursor: pointer; }
-.volume-slider::-moz-range-thumb { width: 14px; height: 14px; background: var(--text-muted); border: none; border-radius: 50%; cursor: pointer; }
-.player-meta { display: flex; align-items: center; justify-content: space-between; }
-.sync-badge { font-size: 0.75rem; font-variant-numeric: tabular-nums; color: var(--text-muted); padding: 4px 10px; background: var(--surface-elevated); border-radius: 20px; }
-.sync-badge.synced { color: var(--success); }
+.registered-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--surface-elevated) 0%, var(--accent-dim) 100%);
+  border: 2px solid var(--accent);
+}
+.registered-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.registered-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.registered-server {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+.registered-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 4px;
+}
 
 .footer { margin-top: auto; text-align: center; font-size: 0.8rem; color: var(--text-muted); }
 .footer a { color: var(--text-muted); text-decoration: none; }

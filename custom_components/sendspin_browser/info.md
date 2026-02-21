@@ -16,7 +16,7 @@ Turn the browser tab showing your Home Assistant dashboard into a **Sendspin pla
 ## Configuration
 
 1. Add the integration via **Settings → Devices & Services → Add Integration** and search for **Sendspin Browser Player**.
-2. (Optional) Set **Default Sendspin server URL** (e.g. `http://homeassistant.local:8095` for Music Assistant).
+2. (Optional) Set **Default Sendspin server URL** (e.g. `http://homeassistant.local:8927` for Music Assistant).
 3. (Optional) Set **Default player name** (e.g. `Living Room Dashboard`). This can be changed later in the panel or in the integration options.
 
 You can change these defaults anytime from the integration’s **Configure** option.
