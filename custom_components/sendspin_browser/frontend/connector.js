@@ -32,6 +32,10 @@
   }
 
   async function run() {
+    // Skip on login/auth pages to avoid unauthenticated requests and ban logs
+    var path = typeof window !== "undefined" && window.location && window.location.pathname;
+    if (path && (path.indexOf("/auth/") !== -1 || path === "/auth")) return;
+
     let config;
     try {
       const res = await fetch(CONFIG_URL, { method: "GET", credentials: "same-origin" });
