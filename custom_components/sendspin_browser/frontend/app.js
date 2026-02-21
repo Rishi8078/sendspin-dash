@@ -99,46 +99,29 @@ async function connect() {
   }
   showError("");
   elements.connectBtn.disabled = true;
-  elements.connectBtn.textContent = "Connecting…";
+  elements.connectBtn.textContent = "Saving…";
+
   try {
     const clientName = getPlayerName();
     if (clientName) savePlayerName(clientName);
-    const playerId = getOrCreatePlayerId();
-    const { SendspinPlayer } = await sdkImport;
-    player = new SendspinPlayer({
-      baseUrl,
-      playerId,
-      clientName: clientName || undefined,
-      onStateChange: () => { },
-    });
-    await player.connect();
+
+    // UI Panel does not connect to the SDK anymore to prevent loops.
+    // We just save the settings, and let connector.js handle the connection lock.
     saveLastUrl(baseUrl);
+
     elements.registeredName.textContent = clientName || "Browser player";
     elements.registeredServer.textContent = baseUrl;
     elements.connectCard.classList.add("hidden");
     elements.registeredCard.classList.remove("hidden");
-    connectionCheckInterval = setInterval(() => {
-      if (player && !player.isConnected) disconnect();
-    }, 2000);
   } catch (err) {
-    console.error("Connection failed:", err);
-    showError(err?.message || "Connection failed");
-    player = null;
+    showError(err?.message || "Registration failed");
   } finally {
     elements.connectBtn.disabled = false;
-    elements.connectBtn.textContent = "Register & connect";
+    elements.connectBtn.textContent = "Save Settings";
   }
 }
 
 function disconnect() {
-  if (connectionCheckInterval) {
-    clearInterval(connectionCheckInterval);
-    connectionCheckInterval = null;
-  }
-  if (player) {
-    player.disconnect();
-    player = null;
-  }
   elements.registeredCard.classList.add("hidden");
   elements.connectCard.classList.remove("hidden");
   showError("");
@@ -153,15 +136,31 @@ async function updateActivePlayers() {
     if (!res.ok) return;
     const playersMap = await res.json();
 
-    // Convert to array and filter out the current connection's player ID over websocket
-    let activePlayers = Array.isArray(playersMap) ? playersMap : Object.values(playersMap);
-    const myId = player ? player.config.playerId : getOrCreatePlayerId();
-    activePlayers = activePlayers.filter(p => p.player_id !== myId);
+    const activePlayers = Array.isArray(playersMap) ? playersMap : Object.values(playersMap);
+    const myId = getOrCreatePlayerId();
+
+    // Check if this browser is currently recognized as actively connected by Home Assistant
+    const amIConnected = activePlayers.some(p => p.player_id === myId);
+
+    if (amIConnected && elements.connectCard.classList.contains("hidden") === false) {
+      elements.connectCard.classList.add("hidden");
+      elements.registeredCard.classList.remove("hidden");
+      elements.registeredName.textContent = getPlayerName() || "Browser player";
+
+      const params = getUrlParams();
+      elements.registeredServer.textContent = normalizeBaseUrl(params.server_url || localStorage.getItem(STORAGE_KEY_URL));
+    } else if (!amIConnected && elements.registeredCard.classList.contains("hidden") === false) {
+      elements.registeredCard.classList.add("hidden");
+      elements.connectCard.classList.remove("hidden");
+    }
+
+    // Filter out our own player ID for the "Other dashboards" list
+    const otherPlayers = activePlayers.filter(p => p.player_id !== myId);
 
     const listElement = document.getElementById("active-players-list");
     const cardElement = document.getElementById("active-players-card");
 
-    if (activePlayers.length === 0) {
+    if (otherPlayers.length === 0) {
       listElement.innerHTML = '<div class="player-item-empty">No other connected dashboards found.</div>';
       cardElement.classList.remove("hidden");
       return;
@@ -170,7 +169,7 @@ async function updateActivePlayers() {
     cardElement.classList.remove("hidden");
     listElement.innerHTML = "";
 
-    for (const p of activePlayers) {
+    for (const p of otherPlayers) {
       const item = document.createElement("div");
       item.className = "player-item";
 

@@ -15,33 +15,34 @@
   <div class="app">
     <header class="header">
       <h1 class="logo">Sendspin</h1>
-      <span class="tagline">Register player</span>
+      <span class="tagline">Player Dashboard</span>
     </header>
 
-    <section id="connect-card" class="panel connect-panel">
+    <!-- Connection / Registration Form -->
+    <section id="connect-card" class="panel connect-panel hidden">
       <div class="connect-content">
-        <p class="connect-intro">Register this browser as a Sendspin player. Set the Player Name here. The Server URL is
-          automatically inherited from your Home Assistant integration options.</p>
-        <label for="player-name" class="connect-label">Player name</label>
-        <input type="text" id="player-name" class="connect-input" placeholder="e.g. Living Room Dashboard"
+        <p class="connect-intro">Register this device as an actively discovering Sendspin Player. The Server URL is
+          securely inherited from your main Home Assistant integration configuration.</p>
+        <label for="player-name" class="connect-label">Device Name</label>
+        <input type="text" id="player-name" class="connect-input" placeholder="e.g. Living Room Tablet"
           autocomplete="off" />
         <p id="connect-error" class="error-msg hidden" role="alert"></p>
-        <button id="connect-btn" class="btn btn-primary btn-connect">Register & connect</button>
+        <button id="connect-btn" class="btn btn-primary btn-connect">Save Settings</button>
       </div>
     </section>
 
+    <!-- Active Status Display -->
     <section id="registered-card" class="panel registered-panel hidden">
       <div class="registered-content">
         <div class="registered-badge" aria-hidden="true"></div>
-        <p class="registered-title">Registered as player</p>
+        <p class="registered-title">Status: Connected</p>
         <p class="registered-name" id="registered-name">—</p>
         <p class="registered-server" id="registered-server">—</p>
-        <p class="registered-hint">Control playback from Music Assistant or another controller. This browser stays
-          registered as long as any Home Assistant tab is open (dashboard, etc.).</p>
-        <button id="disconnect-btn" class="btn btn-text">Disconnect</button>
+        <button id="disconnect-btn" class="btn btn-text">Edit Settings</button>
       </div>
     </section>
 
+    <!-- Other Connected Dashboards -->
     <section id="active-players-card" class="panel active-players-panel hidden">
       <h2 class="active-players-title">Other Connected Dashboards</h2>
       <div id="active-players-list" class="active-players-list">
@@ -49,6 +50,7 @@
       </div>
     </section>
 
+    <!-- Footer -->
     <footer class="footer">
       <a href="https://www.sendspin-audio.com" target="_blank" rel="noopener">Sendspin</a>
       <span class="dot">·</span>

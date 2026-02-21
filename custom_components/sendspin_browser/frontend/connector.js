@@ -73,73 +73,71 @@
     ["click", "touchstart", "keydown"].forEach(e => document.addEventListener(e, unlockAudio, { once: true }));
 
     let player = null;
-    let isConnecting = false;
+    const runBackgroundPlayer = () => {
+      const connectPlayer = async () => {
+        let currentUrl = normalizeBaseUrl(localStorage.getItem(STORAGE_KEY_URL)) || serverUrl;
+        let currentName = localStorage.getItem(STORAGE_KEY_NAME) || clientName;
 
-    const connectPlayer = async () => {
-      let currentUrl = normalizeBaseUrl(localStorage.getItem(STORAGE_KEY_URL)) || serverUrl;
-      let currentName = localStorage.getItem(STORAGE_KEY_NAME) || clientName;
+        if (isConnecting) return;
 
-      // Prevent background worker from clashing with the UI panel if it's open on THIS tab
-      const panelIsActiveLocally = !!document.querySelector("sendspin-browser-panel");
-
-      if (panelIsActiveLocally) {
         if (player) {
+          if (player.isConnected && currentUrl === serverUrl && currentName === clientName) {
+            return;
+          }
           try { player.disconnect(); } catch (_) { }
           player = null;
         }
-        return;
-      }
 
-      if (isConnecting) return;
+        serverUrl = currentUrl;
+        clientName = currentName;
+        if (!serverUrl) return;
 
-      if (player) {
-        if (player.isConnected && currentUrl === serverUrl && currentName === clientName) {
-          return;
-        }
-        try { player.disconnect(); } catch (_) { }
-        player = null;
-      }
-
-      serverUrl = currentUrl;
-      clientName = currentName;
-      if (!serverUrl) return;
-
-      isConnecting = true;
-      try {
-        const { SendspinPlayer } = await import(
-          "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
-        );
-        player = new SendspinPlayer({
-          baseUrl: serverUrl,
-          playerId,
-          clientName: clientName,
-          onStateChange: function () { },
-        });
-        await player.connect();
-
-        window.addEventListener("beforeunload", function () {
-          try { if (player) player.disconnect(); } catch (_) { }
-        });
-      } catch (_) {
-        player = null;
-      } finally {
-        isConnecting = false;
-      }
-
-      // Ping HA backend to report "connected" status
-      if (player && player.isConnected) {
+        isConnecting = true;
         try {
-          fetch(PING_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ player_id: playerId, name: clientName })
+          const { SendspinPlayer } = await import(
+            "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
+          );
+          player = new SendspinPlayer({
+            baseUrl: serverUrl,
+            playerId,
+            clientName: clientName,
+            onStateChange: function () { },
           });
-        } catch (_) { }
-      }
+          await player.connect();
+
+          window.addEventListener("beforeunload", function () {
+            try { if (player) player.disconnect(); } catch (_) { }
+          });
+        } catch (_) {
+          player = null;
+        } finally {
+          isConnecting = false;
+        }
+
+        // Ping HA backend to report "connected" status
+        if (player && player.isConnected) {
+          try {
+            fetch(PING_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ player_id: playerId, name: clientName })
+            });
+          } catch (_) { }
+        }
+      };
+
+      connectPlayer();
+      setInterval(connectPlayer, 5000);
     };
 
-    await connectPlayer();
-    setInterval(connectPlayer, 5000);
+    if (typeof navigator !== "undefined" && navigator.locks) {
+      navigator.locks.request("sendspin-browser-player", () => {
+        runBackgroundPlayer();
+        return new Promise(() => { });
+      }).catch(() => { });
+    } else {
+      runBackgroundPlayer();
+    }
   }
 
   run();
