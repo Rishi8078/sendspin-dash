@@ -105,6 +105,11 @@
           baseUrl: serverUrl,
           playerId,
           clientName: clientName,
+          deviceInfo: {
+            manufacturer: "Home Assistant",
+            product_name: "Sendspin Browser Panel",
+            software_version: "1.0.0"
+          },
           onStateChange: function () { },
         });
         await player.connect();

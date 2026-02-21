@@ -14,6 +14,8 @@ from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo
 
 from .const import (
     CONF_SERVER_URL,
+    CONF_MA_URL,
+    CONF_MA_TOKEN,
     DEFAULT_SERVER_URL,
     DOMAIN,
     SENDSPIN_SERVER_TYPE,
@@ -113,6 +115,8 @@ class SendspinConfigView(HomeAssistantView):
         opts = entry.options or {}
         return self.json({
             "server_url": (opts.get(CONF_SERVER_URL) or "").strip() or DEFAULT_SERVER_URL,
+            "ma_url": (opts.get(CONF_MA_URL) or "http://192.168.0.109:8095").strip(),
+            "ma_token": (opts.get(CONF_MA_TOKEN) or "").strip(),
             "entry_id": entry.entry_id,
         })
 
