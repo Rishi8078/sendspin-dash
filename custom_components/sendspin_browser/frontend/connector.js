@@ -12,6 +12,8 @@
   var STORAGE_NAME = "sendspin-browser-player-name";
   var STORAGE_REGISTERED = "sendspin-browser-registered";
 
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent || "");
+
   function getOrCreatePlayerId() {
     try {
       var id = localStorage.getItem(STORAGE_PLAYER_ID);
@@ -67,6 +69,7 @@
   var connecting = false;
   var SendspinPlayer = null;
   var wasRegistered = false;
+  var keepaliveOsc = null;
 
   try {
     var sdk = await import("/api/sendspin_browser/sendspin-sdk.js");
@@ -74,6 +77,44 @@
   } catch (e) {
     console.error("Sendspin: Failed to load SDK", e);
     return;
+  }
+
+  // --- iOS audio keepalive (Layer 2) ---
+  // On iOS, stream/end → clearBuffers() leaves the MediaStream empty.
+  // iOS detects silence and deactivates the AVAudioSession.
+  // A sub-audible oscillator keeps audio flowing through the MediaStream
+  // so the session stays alive across pause/play cycles.
+  function setupIOSKeepalive(p) {
+    if (!isIOS || keepaliveOsc) return;
+    try {
+      var ap = p.audioProcessor;
+      var ctx = ap && ap.getAudioContext();
+      var dest = ap && ap.streamDestination;
+      if (!ctx || !dest) return;
+      var osc = ctx.createOscillator();
+      var g = ctx.createGain();
+      g.gain.value = 0.001;
+      osc.frequency.value = 1;
+      osc.connect(g);
+      g.connect(dest);
+      osc.start();
+      keepaliveOsc = osc;
+    } catch (_) {}
+  }
+
+  // --- iOS audio element patch (Layer 1) ---
+  // The SDK calls audioElement.pause() in stopAudioElement() when stream/end
+  // arrives. On iOS this deactivates the AVAudioSession. Subsequent
+  // audioElement.play() without a user gesture fails silently.
+  // Patching the SDK's own audio element (player.config.audioElement) prevents this.
+  function patchIOSAudioElement(p) {
+    if (!isIOS) return;
+    try {
+      var audioEl = p.config && p.config.audioElement;
+      if (audioEl && audioEl.pause) {
+        audioEl.pause = function () {};
+      }
+    } catch (_) {}
   }
 
   function updateSharedState(sdkState) {
@@ -143,6 +184,7 @@
         try { player.disconnect("user_request"); } catch (_) {}
       }
       player = null;
+      keepaliveOsc = null;
       window.sendspinPlayer = null;
       window.sendspinState.connected = false;
       window.sendspinState.isPlaying = false;
@@ -164,6 +206,7 @@
       if (player) {
         try { player.disconnect("restart"); } catch (_) {}
       }
+      keepaliveOsc = null;
 
       var name = localStorage.getItem(STORAGE_NAME) || "HA Browser";
       player = new SendspinPlayer({
@@ -173,8 +216,13 @@
         correctionMode: "sync",
         onStateChange: function (state) {
           updateSharedState(state);
+          if (isIOS && state.isPlaying && player) {
+            setupIOSKeepalive(player);
+          }
         },
       });
+
+      patchIOSAudioElement(player);
 
       await player.connect();
       window.sendspinPlayer = player;
@@ -182,6 +230,7 @@
       sendHeartbeat();
     } catch (_) {
       player = null;
+      keepaliveOsc = null;
       window.sendspinPlayer = null;
       window.sendspinState.connected = false;
     } finally {

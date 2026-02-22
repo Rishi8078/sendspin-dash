@@ -210,6 +210,12 @@ class SendspinBrowserPanel extends HTMLElement {
   _cmd(name, params) {
     var p = window.sendspinPlayer;
     if (p && p.isConnected) {
+      try {
+        var ctx = p.audioProcessor && p.audioProcessor.getAudioContext();
+        if (ctx && ctx.state !== "running") ctx.resume();
+        var el = p.config && p.config.audioElement;
+        if (el && el.paused) el.play().catch(function () {});
+      } catch (_) {}
       try { p.sendCommand(name, params); } catch (_) {}
     }
   }
