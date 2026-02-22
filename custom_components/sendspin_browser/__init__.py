@@ -176,7 +176,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         sidebar_icon="mdi:speaker-wireless",
         frontend_url_path=DOMAIN,
         require_admin=False,
-        config={"_panel_custom": {"name": "sendspin-browser-panel", "js_url": panel_url}},
+        config={"_panel_custom": {"name": "sendspin-browser-panel", "module_url": panel_url}},
         update=True,
     )
 
