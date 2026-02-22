@@ -106,8 +106,16 @@ class SendspinBrowserPanel extends LitElement {
   }
 
   _handleRegisterToggle(e) {
-    this._registered = e.target.checked;
-    localStorage.setItem(SK_REG, this._registered ? "true" : "false");
+    const isChecked = e.target.checked;
+    this._registered = isChecked;
+    localStorage.setItem(SK_REG, isChecked ? "true" : "false");
+
+    // Unlock Web Audio Context *immediately* upon user interaction (the click that registers the device)
+    if (isChecked && window.sendspinPlayerInfo && typeof window.sendspinPlayerInfo.unlockAudioContext === 'function') {
+      console.log("[Sendspin Dash] User interaction detected (toggle). Unlocking AudioContext.");
+      window.sendspinPlayerInfo.unlockAudioContext();
+    }
+
     this._poll();
     setTimeout(() => this._fetchPlayers(), 1000);
   }
@@ -181,138 +189,6 @@ class SendspinBrowserPanel extends LitElement {
         overflow: hidden;
       }
       
-      /* --- NOW PLAYING HEADER (HERO) --- */
-      .hero-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 40px 32px;
-        text-align: center;
-        background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), var(--ha-card-background, #1e1e1e);
-      }
-      
-      .hero-artwork-wrap {
-        position: relative;
-        width: 240px;
-        height: 240px;
-        margin-bottom: 32px;
-        border-radius: 12px;
-        background: rgba(0,0,0,0.2);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-      }
-      
-      .hero-artwork {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 12px;
-        display: block;
-      }
-      
-      .hero-placeholder {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 64px;
-        color: var(--secondary-text-color, #666);
-      }
-      
-      .hero-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        margin: 0 0 4px;
-        line-height: 1.2;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-      
-      .hero-artist {
-        font-size: 1.1rem;
-        font-weight: 500;
-        color: var(--secondary-text-color, #aaa);
-        margin: 0 0 20px;
-      }
-      
-      .hero-status {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 16px;
-        border-radius: 20px;
-        background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.1);
-        color: var(--primary-color, #03a9f4);
-        font-size: 0.8rem;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-      }
-      
-      .hero-status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: var(--primary-color, #03a9f4);
-      }
-
-      /* --- CONTROLS --- */
-      .controls {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 20px;
-        margin-top: 32px;
-        width: 100%;
-      }
-      
-      .ctrl-btn {
-        background: transparent;
-        border: none;
-        color: var(--primary-text-color);
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
-        opacity: 0.8;
-        --mdc-icon-size: 28px;
-      }
-      
-      .ctrl-btn:hover {
-        opacity: 1;
-        transform: scale(1.1);
-      }
-      
-      .ctrl-btn:active {
-        transform: scale(0.95);
-      }
-      
-      .ctrl-btn.play-pause {
-        width: 72px;
-        height: 72px;
-        background: var(--primary-color, #03a9f4);
-        color: #fff;
-        opacity: 1;
-        box-shadow: 0 8px 24px rgba(var(--rgb-primary-color, 3, 169, 244), 0.3);
-        --mdc-icon-size: 44px;
-      }
-      
-      .ctrl-btn.play-pause:hover {
-        transform: scale(1.05);
-        box-shadow: 0 12px 32px rgba(var(--rgb-primary-color, 3, 169, 244), 0.4);
-      }
-      
-      .ctrl-btn.play-pause:active {
-        transform: scale(0.95);
-      }
-
       /* --- SECTIONS (SETTINGS & LISTS) --- */
       .section-header {
         padding: 24px 24px 16px;
@@ -534,45 +410,6 @@ class SendspinBrowserPanel extends LitElement {
         
         <div class="content">
           
-          <!-- NOW PLAYING HERO -->
-          <div class="card hero-card">
-            ${showMedia ? html`
-              <div class="hero-artwork-wrap">
-                ${s.artworkUrl
-          ? html`<img class="hero-artwork" src="${s.artworkUrl}" />`
-          : html`<div class="hero-placeholder">\u266B</div>`
-        }
-              </div>
-              <h2 class="hero-title">${s.title}</h2>
-              <div class="hero-artist">${s.artist || "Unknown Artist"}</div>
-            ` : html`
-              <div class="hero-artwork-wrap">
-                <div class="hero-placeholder">\u266B</div>
-              </div>
-              <h2 class="hero-title">Nothing Playing</h2>
-              <div class="hero-artist">Ready to stream audio</div>
-            `}
-            
-            <div class="hero-status">
-              <div class="hero-status-dot" style="background: ${connected ? 'var(--success-color, #4caf50)' : 'var(--secondary-text-color, #666)'}"></div>
-              ${statusText}
-            </div>
-
-            <div class="controls" style="opacity: ${connected ? '1' : '0.3'}; pointer-events: ${connected ? 'auto' : 'none'}">
-              <button class="ctrl-btn" title="Previous" @click=${() => this._cmd("previous")}>
-                <ha-icon icon="mdi:skip-previous"></ha-icon>
-              </button>
-              
-              <button class="ctrl-btn play-pause" title="${isPlaying ? 'Pause' : 'Play'}" @click=${() => this._cmd(isPlaying ? "pause" : "play")}>
-                ${isPlaying ? html`<ha-icon icon="mdi:pause"></ha-icon>` : html`<ha-icon icon="mdi:play"></ha-icon>`}
-              </button>
-              
-              <button class="ctrl-btn" title="Next" @click=${() => this._cmd("next")}>
-                <ha-icon icon="mdi:skip-next"></ha-icon>
-              </button>
-            </div>
-          </div>
-
           <!-- ACTIVE PLAYERS -->
           <div class="card">
             <div class="section-header">
@@ -630,18 +467,7 @@ class SendspinBrowserPanel extends LitElement {
               <h2 class="section-title">This Browser</h2>
             </div>
             
-            <div class="row">
-              <div class="row-text">
-                <span class="row-label">Player Name</span>
-                <span class="row-sub">Friendly name for this device in Music Assistant</span>
-              </div>
-            </div>
-            <div class="input-row">
-              <input type="text" class="field-input" placeholder="e.g. Living Room Tablet" autocomplete="off" 
-                .value=${this._playerName} @input=${this._handleNameInput} />
-            </div>
-
-            <div class="row" style="border-top: 1px solid var(--divider-color, rgba(255,255,255,0.04));">
+            <div class="row" style="padding-bottom: ${this._registered ? '20px' : '12px'};">
               <div class="row-text">
                 <span class="row-label">Enable Audio Engine</span>
                 <span class="row-sub">Register this browser as an active playback target</span>
@@ -651,13 +477,33 @@ class SendspinBrowserPanel extends LitElement {
                 <span class="toggle-slider"></span>
               </label>
             </div>
-            
-            <div class="row" style="border-top: 1px solid var(--divider-color, rgba(255,255,255,0.04)); padding-top: 16px; padding-bottom: 16px;">
-              <div class="row-text">
-                <span class="row-label">Hardware ID</span>
-                <span class="row-sub" style="font-family: monospace; font-size: 0.75rem; margin-top: 4px;">${this._playerId}</span>
+
+            ${!this._registered ? html`
+              <div class="row" style="border-top: 1px solid var(--divider-color, rgba(255,255,255,0.04)); padding-top: 16px;">
+                <div class="row-text">
+                  <span class="row-label">Player Name</span>
+                  <span class="row-sub">Friendly name for this device in Music Assistant</span>
+                </div>
               </div>
-            </div>
+              <div class="input-row">
+                <input type="text" class="field-input" placeholder="e.g. Living Room Tablet" autocomplete="off" 
+                  .value=${this._playerName} @input=${this._handleNameInput} />
+              </div>
+              
+              <div class="row" style="border-top: 1px solid var(--divider-color, rgba(255,255,255,0.04)); padding-top: 16px; padding-bottom: 16px;">
+                <div class="row-text">
+                  <span class="row-label">Hardware ID</span>
+                  <span class="row-sub" style="font-family: monospace; font-size: 0.75rem; margin-top: 4px;">${this._playerId}</span>
+                </div>
+              </div>
+            ` : html`
+              <div class="row" style="border-top: 1px solid var(--divider-color, rgba(255,255,255,0.04));">
+                <div class="row-text">
+                  <span class="row-label">Registered As</span>
+                  <span class="row-value" style="color: var(--primary-color, #03a9f4); font-weight: 600;">${this._playerName || "Unnamed Browser"}</span>
+                </div>
+              </div>
+            `}
           </div>
 
         </div>
