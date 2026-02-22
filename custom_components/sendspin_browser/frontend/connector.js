@@ -186,14 +186,11 @@
       setInterval(connectPlayer, 5000);
     };
 
-    if (typeof navigator !== "undefined" && navigator.locks) {
-      navigator.locks.request("sendspin-browser-player", () => {
-        startSdkConnection();
-        return new Promise(() => { }); // Never resolves to keep the lock
-      }).catch(() => { });
-    } else {
-      startSdkConnection();
-    }
+    // We removed navigator.locks because in a Single Page Application (SPA) like 
+    // Home Assistant, or when users open multiple tabs, it caused a deadlock. 
+    // The previous execution context held the lock forever, leaving new tabs 
+    // or re-evaluating scripts hanging indefinitely. Now, we unconditionally connect.
+    startSdkConnection();
   }
 
   run();
