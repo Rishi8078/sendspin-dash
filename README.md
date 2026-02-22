@@ -1,13 +1,14 @@
-# SendSpin Player for Home Assistant
+# Sendspin Dash
 
-A Home Assistant integration that turns any device with a web browser into a SendSpin player for Music Assistant. When a user opens the Home Assistant dashboard on a device, it automatically registers that device as a playback target.
+A Home Assistant integration that turns any browser tab into a **Sendspin player** for synchronized multi-room audio.
 
 ## Features
 
-- 🎵 Auto-register browser as a SendSpin player
-- 🔌 Seamless integration with Music Assistant
-- 🔐 Secure WebSocket proxy through Home Assistant
-- 🌐 Works on any device with a web browser
+- Auto-register browser as a Sendspin player — works in the background on any HA tab
+- Now-playing metadata (title, artist, album, artwork) displayed in the panel
+- Playback controls (play, pause, next, previous, stop) via the Sendspin protocol
+- Uses the official [sendspin-js](https://github.com/Sendspin/sendspin-js) SDK, bundled locally
+- mDNS server discovery API for finding Sendspin servers on the network
 
 ## Installation
 
@@ -15,42 +16,31 @@ A Home Assistant integration that turns any device with a web browser into a Sen
 1. Install [HACS](https://hacs.xyz/) if not already installed
 2. Go to HACS > Integrations
 3. Click **+ Explore & Download Repositories**
-4. Search for "SendSpin Player"
+4. Search for "Sendspin Dash"
 5. Click **Download** and then **Restart Home Assistant**
 
 ### Manual
-1. Copy the `custom_components/sendspin_player` folder to your Home Assistant `custom_components` directory
+1. Copy the `custom_components/sendspin_browser` folder to your Home Assistant `custom_components` directory
 2. Restart Home Assistant
 
 ## Configuration
 
-1. Go to Settings > Devices & Services > Create Automation
-2. Select "SendSpin Player"
-3. Enter your Music Assistant URL (e.g., `http://192.168.1.100:8060`)
-4. Enter Music Assistant token (optional, if your instance requires authentication)
+1. Go to **Settings > Devices & Services > Add Integration**
+2. Select **Sendspin Dash**
+3. Enter your Sendspin server URL (e.g. `http://homeassistant.local:8927`)
 
 ## How It Works
 
-1. The integration injects a bootstrap script into your Home Assistant dashboard
-2. When you open HA on any device, the script automatically initializes a SendSpin player
-3. The browser communicates with Music Assistant through a secure WebSocket proxy
-4. Your device appears as an available player in Music Assistant
+1. A background **connector** script loads on every HA page (like browser_mod)
+2. It connects to the Sendspin server using the sendspin-js SDK over WebSocket
+3. The browser appears as a player in Music Assistant (or any Sendspin server)
+4. The **Sendspin Dash** panel in the sidebar shows connection status, now-playing info, and playback controls
+5. Registration persists across page navigation — no need to keep the panel open
 
-## Troubleshooting
+## Requirements
 
-### Player not appearing in Music Assistant
-- Check Home Assistant logs: Settings > System > Logs
-- Open browser console (F12) and look for `[SendSpin]` messages
-- Verify Music Assistant URL is correct and accessible
-
-### Connection errors
-- Ensure Music Assistant is running and the `/ws` endpoint is accessible
-- Check firewall rules between Home Assistant and Music Assistant
-- Verify the authentication token if MA requires it
-
-## Support
-
-For issues and feature requests, visit: https://github.com/Rishi8078/Sendspin-player/issues
+- A Sendspin server (e.g. [Music Assistant](https://www.music-assistant.io/) with the Sendspin provider)
+- A browser with Web Audio API support (Chrome, Edge, Firefox, Safari)
 
 ## License
 

@@ -18,8 +18,8 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from .const import CONF_MA_URL, DOMAIN, STATIC_URL_PREFIX
-from .discovery import SendspinConfigView, SendspinDiscoveryView, SendspinPlayersView
+from .const import CONF_SERVER_URL, DOMAIN, STATIC_URL_PREFIX
+from .discovery import SendspinDiscoveryView
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ async def ws_get_config(
     connection: websocket_api.ActiveConnection,
     msg: dict,
 ) -> None:
-    """Return Sendspin server URL derived from the first config entry."""
+    """Return Sendspin server URL from the first config entry."""
     entries = hass.config_entries.async_entries(DOMAIN)
     if not entries:
         connection.send_result(msg["id"], {"server_url": ""})
@@ -41,12 +41,7 @@ async def ws_get_config(
 
     entry = entries[0]
     opts = {**(entry.data or {}), **(entry.options or {})}
-    ma_url = (opts.get(CONF_MA_URL) or "").strip()
-
-    server_url = ""
-    if ma_url:
-        server_url = ma_url.replace(":8095", ":8927") if ":8095" in ma_url else ma_url
-
+    server_url = (opts.get(CONF_SERVER_URL) or "").strip()
     connection.send_result(msg["id"], {"server_url": server_url})
 
 
@@ -62,22 +57,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     frontend_dir = Path(__file__).parent / "frontend"
 
     hass.http.register_view(SendspinDiscoveryView())
-    hass.http.register_view(SendspinConfigView())
-    hass.http.register_view(SendspinPlayersView())
 
     await hass.http.async_register_static_paths(
-        [
-            StaticPathConfig(
-                STATIC_URL_PREFIX,
-                str(frontend_dir),
-                False,
-            )
-        ]
+        [StaticPathConfig(STATIC_URL_PREFIX, str(frontend_dir), False)]
     )
 
     connector_url = f"{STATIC_URL_PREFIX}/connector.js"
     add_extra_js_url(hass, connector_url)
-    hass.data.setdefault(DOMAIN, {})["connector_url"] = connector_url
+    hass.data[DOMAIN]["connector_url"] = connector_url
 
     panel_url = f"{STATIC_URL_PREFIX}/sendspin_browser_panel.js"
     async_register_built_in_panel(
@@ -87,12 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         sidebar_icon="mdi:speaker-wireless",
         frontend_url_path=DOMAIN,
         require_admin=False,
-        config={
-            "_panel_custom": {
-                "name": "sendspin-browser-panel",
-                "js_url": panel_url,
-            }
-        },
+        config={"_panel_custom": {"name": "sendspin-browser-panel", "js_url": panel_url}},
         update=True,
     )
 

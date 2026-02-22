@@ -5,22 +5,19 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
-from .const import CONF_MA_URL, CONF_MA_TOKEN, DOMAIN
+from .const import CONF_SERVER_URL, DOMAIN
 
 
-def _schema(user_input: dict | None) -> vol.Schema:
+def _schema(defaults: dict | None = None) -> vol.Schema:
+    d = defaults or {}
     return vol.Schema(
         {
             vol.Required(
-                CONF_MA_URL,
-                default=(user_input or {}).get(CONF_MA_URL, "http://192.168.0.109:8095"),
-            ): str,
-            vol.Optional(
-                CONF_MA_TOKEN,
-                default=(user_input or {}).get(CONF_MA_TOKEN, ""),
+                CONF_SERVER_URL,
+                default=d.get(CONF_SERVER_URL, ""),
             ): str,
         }
     )
@@ -35,21 +32,15 @@ class SendspinBrowserConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self,
         user_input: dict | None = None,
     ) -> FlowResult:
-        """Handle the initial step."""
         if user_input is not None:
             return self.async_create_entry(
                 title="Sendspin Dash",
-                data={},
-                options={
-                    CONF_MA_URL: (user_input.get(CONF_MA_URL) or "").strip(),
-                    CONF_MA_TOKEN: (user_input.get(CONF_MA_TOKEN) or "").strip(),
-                },
+                data={CONF_SERVER_URL: (user_input.get(CONF_SERVER_URL) or "").strip()},
             )
 
         return self.async_show_form(
             step_id="user",
             data_schema=_schema(user_input),
-            description_placeholders={},
         )
 
     @staticmethod
@@ -57,7 +48,6 @@ class SendspinBrowserConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(
         config_entry: config_entries.ConfigEntry,
     ) -> config_entries.OptionsFlow:
-        """Get the options flow for this handler."""
         return SendspinBrowserOptionsFlow(config_entry)
 
 
@@ -65,30 +55,20 @@ class SendspinBrowserOptionsFlow(config_entries.OptionsFlow):
     """Handle options for Sendspin Dash."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
         self._config_entry = config_entry
 
     async def async_step_init(
         self,
         user_input: dict | None = None,
     ) -> FlowResult:
-        """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(
                 title="",
-                data={
-                    CONF_MA_URL: (user_input.get(CONF_MA_URL) or "").strip(),
-                    CONF_MA_TOKEN: (user_input.get(CONF_MA_TOKEN) or "").strip(),
-                },
+                data={CONF_SERVER_URL: (user_input.get(CONF_SERVER_URL) or "").strip()},
             )
 
-        options = self._config_entry.options or self._config_entry.data or {}
+        merged = {**(self._config_entry.data or {}), **(self._config_entry.options or {})}
         return self.async_show_form(
             step_id="init",
-            data_schema=_schema(
-                {
-                    CONF_MA_URL: options.get(CONF_MA_URL, "http://192.168.0.109:8095"),
-                    CONF_MA_TOKEN: options.get(CONF_MA_TOKEN, ""),
-                }
-            ),
+            data_schema=_schema({CONF_SERVER_URL: merged.get(CONF_SERVER_URL, "")}),
         )
