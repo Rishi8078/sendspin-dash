@@ -559,9 +559,6 @@ class SendspinBrowserPanel extends LitElement {
             </div>
 
             <div class="controls" style="opacity: ${connected ? '1' : '0.3'}; pointer-events: ${connected ? 'auto' : 'none'}">
-              <button class="ctrl-btn" title="Stop" @click=${() => this._cmd("stop")}>
-                <ha-icon icon="mdi:stop"></ha-icon>
-              </button>
               <button class="ctrl-btn" title="Previous" @click=${() => this._cmd("previous")}>
                 <ha-icon icon="mdi:skip-previous"></ha-icon>
               </button>
@@ -572,9 +569,6 @@ class SendspinBrowserPanel extends LitElement {
               
               <button class="ctrl-btn" title="Next" @click=${() => this._cmd("next")}>
                 <ha-icon icon="mdi:skip-next"></ha-icon>
-              </button>
-              <button class="ctrl-btn" title="Options" style="opacity: 0.5" disabled>
-                <ha-icon icon="mdi:dots-vertical"></ha-icon>
               </button>
             </div>
           </div>
@@ -601,26 +595,28 @@ class SendspinBrowserPanel extends LitElement {
           else if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) browser = "Safari";
 
           let os = "";
-          let icon = "\uD83D\uDDA5\uFE0F"; // Desktop
-          if (/Android/.test(ua)) { os = "Android"; icon = "\uD83D\uDCF1"; }
-          else if (/iPhone|iPad/.test(ua)) { os = "iOS"; icon = "\uD83D\uDCF1"; }
-          else if (/Linux/.test(ua)) os = "Linux";
-          else if (/Mac OS/.test(ua)) os = "macOS";
-          else if (/Windows/.test(ua)) os = "Windows";
+          let icon = "mdi:desktop-classic"; // Desktop fallback
+          if (/Android/.test(ua)) { os = "Android"; icon = "mdi:cellphone"; }
+          else if (/iPhone|iPad/.test(ua)) { os = "iOS"; icon = "mdi:apple-ios"; }
+          else if (/Linux/.test(ua)) { os = "Linux"; icon = "mdi:linux"; }
+          else if (/Mac OS/.test(ua)) { os = "macOS"; icon = "mdi:apple"; }
+          else if (/Windows/.test(ua)) { os = "Windows"; icon = "mdi:microsoft-windows"; }
 
           const device = browser + (os ? " on " + os : "");
 
           return html`
                       <div class="player-row ${isMe ? 'is-me' : ''}">
-                        <div class="device-icon">${icon}</div>
+                        <div class="device-icon">
+                          <ha-icon icon="${icon}"></ha-icon>
+                        </div>
                         <div class="player-info">
-                          <div class="player-name">${p.name || "Unnamed Browser"}</div>
+                          <div class="player-name">${p.name || "Unnamed Browser"}${isMe ? html`<span class="me-badge">This browser</span>` : ""}</div>
                           <div class="player-meta">
                             <div class="status-dot-small ${statusClass}"></div>
                             ${statusLabel} &middot; ${device} &middot; ${seen}
                           </div>
                         </div>
-                        <button class="remove-btn" title="Remove" @click=${() => this._removePlayer(p.player_id)}>&times;</button>
+                        <button class="remove-btn" title="Remove player" @click=${() => this._removePlayer(p.player_id)}>&times;</button>
                       </div>
                     `;
         })
