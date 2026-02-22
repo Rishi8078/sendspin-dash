@@ -152,307 +152,366 @@ class SendspinBrowserPanel extends LitElement {
         display: block;
         height: 100%;
         min-height: 100%;
-        background: var(--primary-background-color, #1c1c1c);
-        color: var(--primary-text-color, #e3e3e3);
-        font-family: var(--ha-font-family-body, system-ui, -apple-system, sans-serif);
+        background-color: var(--primary-background-color, #111111);
+        color: var(--primary-text-color, #ffffff);
+        font-family: var(--ha-font-family-body, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
         -webkit-font-smoothing: antialiased;
         --app-header-background-color: var(--sidebar-background-color);
         --app-header-text-color: var(--sidebar-text-color);
         --app-header-border-bottom: 1px solid var(--divider-color);
-        --radius: var(--ha-config-card-border-radius, 12px);
+        --radius: 20px;
+        --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.15);
+        --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.25);
       }
+      
       .content {
-        max-width: 600px;
+        max-width: 680px;
         margin: 0 auto;
-        padding: 16px;
+        padding: 32px 24px;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 32px;
       }
+      
       .card {
-        background: var(--ha-card-background, var(--card-background-color, #2a2a2a));
-        border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.08));
+        background: var(--ha-card-background, var(--card-background-color, #1e1e1e));
+        border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.04));
         border-radius: var(--radius);
+        box-shadow: var(--shadow-soft);
         overflow: hidden;
       }
-      .card-title {
+      
+      /* --- NOW PLAYING HEADER (HERO) --- */
+      .hero-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px 32px;
+        text-align: center;
+        background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%), var(--ha-card-background, #1e1e1e);
+      }
+      
+      .hero-artwork-wrap {
+        position: relative;
+        width: 240px;
+        height: 240px;
+        margin-bottom: 32px;
+        border-radius: 12px;
+        background: rgba(0,0,0,0.2);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      }
+      
+      .hero-artwork {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 12px;
+        display: block;
+      }
+      
+      .hero-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 64px;
+        color: var(--secondary-text-color, #666);
+      }
+      
+      .hero-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        margin: 0 0 4px;
+        line-height: 1.2;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      
+      .hero-artist {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: var(--secondary-text-color, #aaa);
+        margin: 0 0 20px;
+      }
+      
+      .hero-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        border-radius: 20px;
+        background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.1);
+        color: var(--primary-color, #03a9f4);
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      
+      .hero-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--primary-color, #03a9f4);
+      }
+
+      /* --- CONTROLS --- */
+      .controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        margin-top: 32px;
+        width: 100%;
+      }
+      
+      .ctrl-btn {
+        background: transparent;
+        border: none;
+        color: var(--primary-text-color);
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
+        opacity: 0.8;
+      }
+      
+      .ctrl-btn:hover {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+      
+      .ctrl-btn:active {
+        transform: scale(0.95);
+      }
+      
+      .ctrl-btn.play-pause {
+        width: 72px;
+        height: 72px;
+        background: var(--primary-color, #03a9f4);
+        color: #fff;
+        font-size: 2rem;
+        opacity: 1;
+        box-shadow: 0 8px 24px rgba(var(--rgb-primary-color, 3, 169, 244), 0.3);
+      }
+      
+      .ctrl-btn.play-pause:hover {
+        transform: scale(1.05);
+        box-shadow: 0 12px 32px rgba(var(--rgb-primary-color, 3, 169, 244), 0.4);
+      }
+      
+      .ctrl-btn.play-pause:active {
+        transform: scale(0.95);
+      }
+
+      /* --- SECTIONS (SETTINGS & LISTS) --- */
+      .section-header {
+        padding: 24px 24px 16px;
+        border-bottom: 1px solid var(--divider-color, rgba(255, 255, 255, 0.04));
+      }
+      
+      .section-title {
         font-size: 1.1rem;
         font-weight: 600;
-        padding: 20px 20px 0;
         margin: 0;
-        color: var(--primary-text-color);
+        letter-spacing: -0.01em;
       }
+      
       .row {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 16px 20px;
-        gap: 16px;
+        padding: 20px 24px;
+        gap: 24px;
       }
+      
       .row-text {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 4px;
         flex: 1;
       }
+      
       .row-label {
         font-size: 1rem;
         font-weight: 500;
+        color: var(--primary-text-color);
       }
+      
       .row-sub {
         font-size: 0.85rem;
-        color: var(--secondary-text-color, #9e9e9e);
+        color: var(--secondary-text-color, #888);
         line-height: 1.4;
       }
+      
+      .row-value {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--secondary-text-color, #888);
+      }
+      
+      /* --- TOGGLE --- */
       .toggle {
         position: relative;
         display: inline-block;
-        width: 48px;
-        height: 26px;
+        width: 52px;
+        height: 30px;
         flex-shrink: 0;
       }
-      .toggle input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-      }
+      .toggle input { opacity: 0; width: 0; height: 0; }
       .toggle-slider {
-        position: absolute;
-        cursor: pointer;
-        inset: 0;
-        background: var(--disabled-color, #555);
-        border-radius: 26px;
-        transition: background 0.3s;
+        position: absolute; cursor: pointer; inset: 0;
+        background: var(--disabled-color, #444);
+        border-radius: 30px; transition: background 0.3s;
       }
       .toggle-slider::before {
-        content: "";
-        position: absolute;
-        height: 20px;
-        width: 20px;
-        left: 3px;
-        bottom: 3px;
-        background: #fff;
-        border-radius: 50%;
-        transition: transform 0.3s;
+        content: ""; position: absolute; height: 24px; width: 24px;
+        left: 3px; bottom: 3px; background: #fff;
+        border-radius: 50%; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       }
-      .toggle input:checked + .toggle-slider {
-        background: var(--primary-color, #03a9f4);
+      .toggle input:checked + .toggle-slider { background: var(--primary-color, #03a9f4); }
+      .toggle input:checked + .toggle-slider::before { transform: translateX(22px); }
+      
+      /* --- INPUTS --- */
+      .input-row {
+        padding: 0 24px 24px;
       }
-      .toggle input:checked + .toggle-slider::before {
-        transform: translateX(22px);
-      }
-      .field-wrap {
-        padding: 0 20px 16px;
-      }
+      
       .field-input {
         width: 100%;
-        background: var(--input-fill-color, rgba(0, 0, 0, 0.15));
+        background: rgba(0, 0, 0, 0.2);
         border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.08));
-        border-radius: 8px;
-        padding: 12px 14px;
+        border-radius: 12px;
+        padding: 16px;
         font-family: inherit;
-        font-size: 0.95rem;
+        font-size: 1rem;
         color: var(--primary-text-color);
         outline: none;
         box-sizing: border-box;
-        transition: border-color 0.2s;
+        transition: border-color 0.2s, box-shadow 0.2s;
       }
+      
       .field-input:focus {
         border-color: var(--primary-color, #03a9f4);
-        box-shadow: 0 0 0 2px rgba(var(--rgb-primary-color, 3, 169, 244), 0.2);
+        background: rgba(0, 0, 0, 0.3);
+        box-shadow: 0 0 0 3px rgba(var(--rgb-primary-color, 3, 169, 244), 0.15);
       }
-      .id-row {
-        padding: 12px 20px;
-        border-top: 1px solid var(--divider-color, rgba(255, 255, 255, 0.06));
+
+      /* --- PLAYER LIST --- */
+      .players-list {
         display: flex;
-        gap: 8px;
-        align-items: center;
+        flex-direction: column;
       }
-      .id-label {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--secondary-text-color);
-      }
-      .id-val {
-        font-size: 0.75rem;
-        font-family: monospace;
-        color: var(--secondary-text-color);
-        opacity: 0.7;
-      }
-      .status-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        flex-shrink: 0;
-        transition: background 0.3s;
-      }
-      .status-dot.connected {
-        background: var(--success-color, #4caf50);
-        box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
-      }
-      .status-dot.offline {
-        background: var(--secondary-text-color, #9e9e9e);
-        opacity: 0.5;
-      }
+      
       .player-row {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 12px 20px;
-        border-top: 1px solid var(--divider-color, rgba(255, 255, 255, 0.06));
+        gap: 16px;
+        padding: 16px 24px;
+        border-top: 1px solid var(--divider-color, rgba(255, 255, 255, 0.04));
+        transition: background 0.2s;
       }
-      .player-row.is-me {
-        background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.06);
-      }
-      .player-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
+      
+      .player-row:first-child { border-top: none; }
+      .player-row:hover { background: rgba(255, 255, 255, 0.02); }
+      .player-row.is-me { background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.04); }
+      
+      .device-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        color: var(--secondary-text-color);
         flex-shrink: 0;
       }
-      .player-dot.connected {
-        background: var(--success-color, #4caf50);
-        box-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+      
+      .player-row.is-me .device-icon {
+        background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.1);
+        color: var(--primary-color, #03a9f4);
       }
-      .player-dot.warn {
-        background: var(--warning-color, #ff9800);
-        box-shadow: 0 0 6px rgba(255, 152, 0, 0.4);
-      }
-      .player-dot.offline {
-        background: var(--secondary-text-color, #9e9e9e);
-        opacity: 0.4;
-      }
+      
       .player-info {
         flex: 1;
         min-width: 0;
       }
+      
       .player-name {
-        font-size: 0.95rem;
+        font-size: 1rem;
         font-weight: 500;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        margin-bottom: 2px;
       }
-      .me-badge {
-        font-size: 0.7rem;
-        font-weight: 600;
-        color: var(--primary-color, #03a9f4);
-        background: rgba(var(--rgb-primary-color, 3, 169, 244), 0.12);
-        padding: 2px 6px;
-        border-radius: 4px;
-        margin-left: 6px;
-        vertical-align: middle;
-      }
+      
       .player-meta {
-        font-size: 0.8rem;
-        color: var(--secondary-text-color, #9e9e9e);
-        margin-top: 2px;
+        font-size: 0.85rem;
+        color: var(--secondary-text-color, #888);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
+      
+      .status-dot-small {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .status-dot-small.connected { background: var(--success-color, #4caf50); }
+      .status-dot-small.warn { background: var(--warning-color, #ff9800); }
+      .status-dot-small.offline { background: var(--secondary-text-color, #666); }
+      
       .remove-btn {
         background: none;
         border: none;
-        color: var(--secondary-text-color, #9e9e9e);
+        color: var(--secondary-text-color, #666);
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-size: 1.2rem;
         cursor: pointer;
-        padding: 4px 8px;
-        border-radius: 4px;
-        opacity: 0.5;
-        transition: opacity 0.15s, color 0.15s;
-        flex-shrink: 0;
+        transition: all 0.2s;
+        opacity: 0;
+        transform: translateX(10px);
       }
+      
+      .player-row:hover .remove-btn {
+        opacity: 0.6;
+        transform: translateX(0);
+      }
+      
       .remove-btn:hover {
-        opacity: 1;
+        opacity: 1 !important;
+        background: rgba(255, 255, 255, 0.1);
         color: var(--error-color, #f44336);
       }
+      
       .empty-msg {
-        padding: 16px 20px;
-        font-size: 0.9rem;
-        color: var(--secondary-text-color, #9e9e9e);
+        padding: 32px;
         text-align: center;
-      }
-      .np {
-        padding: 16px 20px;
-        display: flex;
-        gap: 16px;
-        align-items: center;
-        border-top: 1px solid var(--divider-color, rgba(255, 255, 255, 0.06));
-      }
-      .np-art {
-        width: 64px;
-        height: 64px;
-        border-radius: 8px;
-        object-fit: cover;
-        flex-shrink: 0;
-      }
-      .np-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 0;
-      }
-      .np-title {
-        font-size: 1rem;
-        font-weight: 600;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .np-artist {
-        font-size: 0.85rem;
-        color: var(--secondary-text-color);
-      }
-      .np-album {
-        font-size: 0.8rem;
-        color: var(--secondary-text-color);
-        opacity: 0.7;
-      }
-      .controls {
-        display: flex;
-        justify-content: center;
-        gap: 12px;
-        padding: 12px 20px;
-        border-top: 1px solid var(--divider-color, rgba(255, 255, 255, 0.06));
-      }
-      .ctrl-btn {
-        width: 40px;
-        height: 40px;
-        border: none;
-        border-radius: 50%;
-        background: var(--primary-color, #03a9f4);
-        color: #fff;
-        font-size: 1.1rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: opacity 0.15s;
-      }
-      .ctrl-btn:hover {
-        opacity: 0.8;
-      }
-      .ctrl-btn.secondary {
-        background: transparent;
-        border: 1px solid var(--divider-color, rgba(255, 255, 255, 0.15));
-        color: var(--primary-text-color);
-      }
-      .ps-label {
-        text-align: center;
-        padding: 4px 20px 12px;
-        font-size: 0.8rem;
-        color: var(--secondary-text-color);
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-      .count-badge {
-        font-size: 0.8rem;
-        font-weight: 400;
-        color: var(--secondary-text-color);
-        margin-left: 8px;
+        color: var(--secondary-text-color, #888);
+        font-size: 0.95rem;
       }
     `;
   }
@@ -461,64 +520,65 @@ class SendspinBrowserPanel extends LitElement {
     const s = this._state;
     const connected = s.connected;
 
-    let statusText = "Not registered";
-    if (connected) statusText = "Connected to Sendspin server";
+    let statusText = "Offline";
+    if (connected) statusText = "Connected";
     else if (this._registered) statusText = "Connecting\u2026";
 
-    let psText = "";
-    if (connected) {
-      if (s.isPlaying) psText = "Playing";
-      else if (s.playbackState === "stopped") psText = "Stopped";
-      else psText = "Idle";
-    }
-
-    const showNp = connected && s.isPlaying && s.title;
+    const showMedia = connected && s.title;
+    const isPlaying = s.isPlaying;
 
     return html`
       <ha-top-app-bar-fixed>
         <ha-menu-button slot="navigationIcon" .hass=${this.hass} .narrow=${this.narrow}></ha-menu-button>
         <div slot="title">Sendspin Dash</div>
+        
         <div class="content">
-          <div class="card">
-            <h2 class="card-title">This Browser</h2>
-            <div class="row">
-              <div class="row-text">
-                <span class="row-label">Connection</span>
-                <span class="row-sub">${statusText}</span>
+          
+          <!-- NOW PLAYING HERO -->
+          <div class="card hero-card">
+            ${showMedia ? html`
+              <div class="hero-artwork-wrap">
+                ${s.artworkUrl
+          ? html`<img class="hero-artwork" src="${s.artworkUrl}" />`
+          : html`<div class="hero-placeholder">\u266B</div>`
+        }
               </div>
-              <div class="status-dot ${connected ? "connected" : "offline"}"></div>
-            </div>
-            <div class="row">
-              <div class="row-text">
-                <span class="row-label">Register as Player</span>
-                <span class="row-sub">Enable this browser as a Sendspin player</span>
+              <h2 class="hero-title">${s.title}</h2>
+              <div class="hero-artist">${s.artist || "Unknown Artist"}</div>
+            ` : html`
+              <div class="hero-artwork-wrap">
+                <div class="hero-placeholder">\u266B</div>
               </div>
-              <label class="toggle">
-                <input type="checkbox" .checked=${this._registered} @change=${this._handleRegisterToggle} />
-                <span class="toggle-slider"></span>
-              </label>
+              <h2 class="hero-title">Nothing Playing</h2>
+              <div class="hero-artist">Ready to stream audio</div>
+            `}
+            
+            <div class="hero-status">
+              <div class="hero-status-dot" style="background: ${connected ? 'var(--success-color, #4caf50)' : 'var(--secondary-text-color, #666)'}"></div>
+              ${statusText}
             </div>
-            <div class="row">
-              <div class="row-text">
-                <span class="row-label">Player Name</span>
-                <span class="row-sub">Friendly name for this device</span>
-              </div>
-            </div>
-            <div class="field-wrap">
-              <input type="text" class="field-input" placeholder="e.g. Living Room Tablet" autocomplete="off" 
-                .value=${this._playerName} @input=${this._handleNameInput} />
-            </div>
-            <div class="id-row">
-              <span class="id-label">Browser ID:</span>
-              <span class="id-val">${this._playerId}</span>
+
+            <div class="controls" style="opacity: ${connected ? '1' : '0.3'}; pointer-events: ${connected ? 'auto' : 'none'}">
+              <button class="ctrl-btn" title="Stop" @click=${() => this._cmd("stop")}>\u25A0</button>
+              <button class="ctrl-btn" title="Previous" @click=${() => this._cmd("previous")}>\u23EE</button>
+              
+              <button class="ctrl-btn play-pause" title="${isPlaying ? 'Pause' : 'Play'}" @click=${() => this._cmd(isPlaying ? "pause" : "play")}>
+                ${isPlaying ? html`\u23F8` : html`\u25B6`}
+              </button>
+              
+              <button class="ctrl-btn" title="Next" @click=${() => this._cmd("next")}>\u23ED</button>
+              <button class="ctrl-btn" title="Options" style="opacity: 0.5" disabled>\u22EE</button>
             </div>
           </div>
-          
+
+          <!-- ACTIVE PLAYERS -->
           <div class="card">
-            <h2 class="card-title">Registered Players<span class="count-badge"></span></h2>
+            <div class="section-header">
+              <h2 class="section-title">Active Players</h2>
+            </div>
             <div class="players-list">
               ${this._players.length === 0
-        ? html`<div class="empty-msg">No registered players yet. Toggle the switch above to register this browser.</div>`
+        ? html`<div class="empty-msg">No players discovered yet. Enable a browser below to register it.</div>`
         : this._players.map(p => {
           const isMe = p.player_id === this._playerId;
           const statusClass = p.status === "connected" ? "connected" : (p.status === "online" ? "warn" : "offline");
@@ -533,8 +593,9 @@ class SendspinBrowserPanel extends LitElement {
           else if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) browser = "Safari";
 
           let os = "";
-          if (/Android/.test(ua)) os = "Android";
-          else if (/iPhone|iPad/.test(ua)) os = "iOS";
+          let icon = "\uD83D\uDDA5\uFE0F"; // Desktop
+          if (/Android/.test(ua)) { os = "Android"; icon = "\uD83D\uDCF1"; }
+          else if (/iPhone|iPad/.test(ua)) { os = "iOS"; icon = "\uD83D\uDCF1"; }
           else if (/Linux/.test(ua)) os = "Linux";
           else if (/Mac OS/.test(ua)) os = "macOS";
           else if (/Windows/.test(ua)) os = "Windows";
@@ -543,12 +604,15 @@ class SendspinBrowserPanel extends LitElement {
 
           return html`
                       <div class="player-row ${isMe ? 'is-me' : ''}">
-                        <div class="player-dot ${statusClass}"></div>
+                        <div class="device-icon">${icon}</div>
                         <div class="player-info">
-                          <div class="player-name">${p.name || "Unnamed Browser"}${isMe ? html`<span class="me-badge">This browser</span>` : ""}</div>
-                          <div class="player-meta">${device} &middot; ${statusLabel} &middot; ${seen}</div>
+                          <div class="player-name">${p.name || "Unnamed Browser"}</div>
+                          <div class="player-meta">
+                            <div class="status-dot-small ${statusClass}"></div>
+                            ${statusLabel} &middot; ${device} &middot; ${seen}
+                          </div>
                         </div>
-                        <button class="remove-btn" title="Remove player" @click=${() => this._removePlayer(p.player_id)}>&times;</button>
+                        <button class="remove-btn" title="Remove" @click=${() => this._removePlayer(p.player_id)}>&times;</button>
                       </div>
                     `;
         })
@@ -556,29 +620,42 @@ class SendspinBrowserPanel extends LitElement {
             </div>
           </div>
 
+          <!-- DEVICE SETTINGS -->
           <div class="card">
-            <h2 class="card-title">Now Playing</h2>
-            ${showNp ? html`
-              <div class="np">
-                ${s.artworkUrl ? html`<img class="np-art" src="${s.artworkUrl}" />` : ""}
-                <div class="np-info">
-                  <span class="np-title">${s.title}</span>
-                  <span class="np-artist">${s.artist}</span>
-                  <span class="np-album">${s.album}</span>
-                </div>
+            <div class="section-header">
+              <h2 class="section-title">This Browser</h2>
+            </div>
+            
+            <div class="row">
+              <div class="row-text">
+                <span class="row-label">Player Name</span>
+                <span class="row-sub">Friendly name for this device in Music Assistant</span>
               </div>
-            ` : ""}
-            <div class="ps-label">${psText}</div>
-            ${connected ? html`
-              <div class="controls">
-                <button class="ctrl-btn secondary" title="Previous" @click=${() => this._cmd("previous")}>\u23EE</button>
-                <button class="ctrl-btn" title="Play" @click=${() => this._cmd("play")}>\u25B6</button>
-                <button class="ctrl-btn secondary" title="Pause" @click=${() => this._cmd("pause")}>\u23F8</button>
-                <button class="ctrl-btn secondary" title="Next" @click=${() => this._cmd("next")}>\u23ED</button>
-                <button class="ctrl-btn secondary" title="Stop" @click=${() => this._cmd("stop")}>\u23F9</button>
+            </div>
+            <div class="input-row">
+              <input type="text" class="field-input" placeholder="e.g. Living Room Tablet" autocomplete="off" 
+                .value=${this._playerName} @input=${this._handleNameInput} />
+            </div>
+
+            <div class="row" style="border-top: 1px solid var(--divider-color, rgba(255,255,255,0.04));">
+              <div class="row-text">
+                <span class="row-label">Enable Audio Engine</span>
+                <span class="row-sub">Register this browser as an active playback target</span>
               </div>
-            ` : ""}
+              <label class="toggle">
+                <input type="checkbox" .checked=${this._registered} @change=${this._handleRegisterToggle} />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="row" style="border-top: 1px solid var(--divider-color, rgba(255,255,255,0.04)); padding-top: 16px; padding-bottom: 16px;">
+              <div class="row-text">
+                <span class="row-label">Hardware ID</span>
+                <span class="row-sub" style="font-family: monospace; font-size: 0.75rem; margin-top: 4px;">${this._playerId}</span>
+              </div>
+            </div>
           </div>
+
         </div>
       </ha-top-app-bar-fixed>
     `;
