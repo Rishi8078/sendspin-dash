@@ -1,196 +1,192 @@
 /**
  * Sendspin connector — runs on every Home Assistant page (like browser_mod).
- * Keeps this browser registered as a Sendspin player so it works even when the
- * custom panel is closed. As long as any HA tab is open (e.g. dashboard), the
- * connection to the Sendspin server is maintained.
+ * Reads config via HA's WebSocket API (no HTTP fetch, no auth issues).
+ * Exposes the active player on window.sendspinPlayer so the panel can read status.
  */
 (function () {
-  const CONFIG_URL = "/api/sendspin_browser/config";
-  const STORAGE_KEY_PLAYER_ID = "sendspin-browser-player-id";
-  const STORAGE_KEY_URL = "sendspin-browser-player-last-url";
-  const STORAGE_KEY_NAME = "sendspin-browser-player-name";
-  const STORAGE_KEY_REGISTERED = "sendspin-browser-registered";
+  if (window.__sendspinConnectorActive) return;
+  window.__sendspinConnectorActive = true;
+
+  var STORAGE_PLAYER_ID = "sendspin-browser-player-id";
+  var STORAGE_NAME = "sendspin-browser-player-name";
+  var STORAGE_REGISTERED = "sendspin-browser-registered";
+  var STORAGE_LAST_URL = "sendspin-browser-player-last-url";
 
   function getOrCreatePlayerId() {
     try {
-      let id = localStorage.getItem(STORAGE_KEY_PLAYER_ID);
+      var id = localStorage.getItem(STORAGE_PLAYER_ID);
       if (id && id.length >= 8) return id;
       id =
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
-          : "sendspin-browser-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
-      localStorage.setItem(STORAGE_KEY_PLAYER_ID, id);
+          : "sb-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      localStorage.setItem(STORAGE_PLAYER_ID, id);
       return id;
     } catch (_) {
-      return "sendspin-browser-" + Date.now();
+      return "sb-" + Date.now();
     }
   }
 
-  function normalizeBaseUrl(s) {
-    if (!s || typeof s !== "string") return null;
-    const url = s.trim().replace(/\/+$/, "");
-    if (!url) return null;
-    if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    return "http://" + url;
+  function normalizeUrl(s) {
+    if (!s || typeof s !== "string") return "";
+    var url = s.trim().replace(/\/+$/, "");
+    if (!url) return "";
+    if (!url.startsWith("http://") && !url.startsWith("https://")) url = "http://" + url;
+    return url;
+  }
+
+  function getHass() {
+    try {
+      var el = document.querySelector("home-assistant");
+      return el && el.hass && el.hass.connection ? el.hass : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function waitForHass() {
+    for (var i = 0; i < 120; i++) {
+      var h = getHass();
+      if (h) return h;
+      await new Promise(function (r) { setTimeout(r, 250); });
+    }
+    return null;
   }
 
   async function run() {
-    // Skip on login/auth pages to avoid unauthenticated requests
-    var path = typeof window !== "undefined" && window.location && window.location.pathname;
-    if (path && (path.indexOf("/auth/") !== -1 || path === "/auth")) return;
+    if (location.pathname.startsWith("/auth")) return;
 
-    let config = {};
+    var hass = await waitForHass();
+    if (!hass) return;
+
+    // Fetch config via HA WebSocket — authenticated, no HTTP fetch needed
+    var serverUrl = "";
     try {
-      const res = await fetch(CONFIG_URL, { method: "GET", credentials: "same-origin" });
-      if (res.ok) {
-        config = await res.json();
-      }
-    } catch (_) { }
+      var cfg = await hass.callWS({ type: "sendspin_browser/config" });
+      serverUrl = normalizeUrl(cfg && cfg.server_url);
+    } catch (_) {}
 
-    let serverUrl = normalizeBaseUrl(config.server_url);
-    if (!serverUrl) {
-      serverUrl = normalizeBaseUrl(localStorage.getItem(STORAGE_KEY_URL));
-    }
+    if (!serverUrl) serverUrl = normalizeUrl(localStorage.getItem(STORAGE_LAST_URL));
+    if (!serverUrl) return;
 
-    const playerId = getOrCreatePlayerId();
-    let clientName = config.player_name;
-    if (!clientName || !clientName.trim()) {
-      clientName = localStorage.getItem(STORAGE_KEY_NAME);
-    }
-    if (!clientName || !clientName.trim()) {
-      clientName = "HA Browser";
-    }
+    localStorage.setItem(STORAGE_LAST_URL, serverUrl);
 
-    // ── Check if user actually enabled this browser ──
-    const isRegistered = localStorage.getItem(STORAGE_KEY_REGISTERED) === "true";
-    if (!isRegistered || !serverUrl) return;
+    var playerId = getOrCreatePlayerId();
 
-    // Unlock browser audio autoplay on user interaction.
-    // iOS/iPadOS suspends the AudioContext when the app goes idle,
-    // so we keep the listeners alive to re-unlock on every interaction.
-    const unlockAudio = () => {
+    // Unlock browser audio autoplay on first user interaction.
+    // Keep listeners alive — iOS re-suspends the AudioContext on idle.
+    var unlock = function () {
       try {
-        const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
-        audio.play().catch(() => { });
-      } catch (_) { }
+        new Audio(
+          "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"
+        ).play().catch(function () {});
+      } catch (_) {}
     };
-    ["click", "touchstart", "keydown"].forEach(e => document.addEventListener(e, unlockAudio));
+    ["click", "touchstart", "keydown"].forEach(function (e) {
+      document.addEventListener(e, unlock);
+    });
 
-    // Resume AudioContext when app returns to foreground (iOS suspends it)
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && player && player.audioContext) {
-        try { player.audioContext.resume().catch(() => { }); } catch (_) { }
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") {
+        try {
+          var p = window.sendspinPlayer;
+          if (p && p.audioContext) p.audioContext.resume().catch(function () {});
+        } catch (_) {}
       }
     });
 
-    let player = null;
-    let isConnecting = false;
-    let forceReconnect = false;
+    // Persistent audio element — reused across reconnects.
+    // .pause() is intercepted so iOS keeps the audio session alive after stream stop.
+    var audioEl = document.createElement("audio");
+    audioEl.style.display = "none";
+    document.body.appendChild(audioEl);
+    audioEl.pause = function () {};
 
-    const connectPlayer = async () => {
-      let currentUrl = normalizeBaseUrl(localStorage.getItem(STORAGE_KEY_URL)) || serverUrl;
-      let currentName = localStorage.getItem(STORAGE_KEY_NAME) || clientName;
+    var player = null;
+    var connecting = false;
+    var SdkClass = null;
 
-      if (isConnecting) return;
+    async function tick() {
+      var registered = localStorage.getItem(STORAGE_REGISTERED) === "true";
 
-      if (player) {
-        if (player.isConnected && !forceReconnect && currentUrl === serverUrl && currentName === clientName) {
-          return; // Already connected, nothing to do
+      if (!registered) {
+        if (player) {
+          try { player.disconnect(); } catch (_) {}
         }
-        try { player.disconnect(); } catch (_) { }
         player = null;
-        forceReconnect = false;
+        window.sendspinPlayer = null;
+        return;
       }
 
-      serverUrl = currentUrl;
-      clientName = currentName;
-      if (!serverUrl) return;
+      if (player && player.isConnected) {
+        window.sendspinPlayer = player;
+        return;
+      }
 
-      isConnecting = true;
+      if (connecting) return;
+      connecting = true;
+
       try {
-        const { SendspinPlayer } = await import(
-          "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
-        );
+        if (!SdkClass) {
+          var m = await import(
+            "https://unpkg.com/@music-assistant/sendspin-js@1.0/dist/index.js"
+          );
+          SdkClass = m.SendspinPlayer;
+        }
 
-        // --- iOS Autoplay Fix ---
-        // The Sendspin SDK internally bridges the Web Audio API to an HTML5 <audio> element.
-        // On stream end (pause/skip), it calls .pause() on that element. 
-        // On iOS, pausing the element drops the audio session. When a remote play command
-        // arrives later via WebSocket, iOS blocks the subsequent .play() call because it
-        // lacks a user gesture. 
-        // FIX: We provide our own audio element and intercept .pause() to do nothing. 
-        // The element keeps "playing" the empty MediaStream, retaining the iOS audio session!
-        const autoPlayAudioElement = document.createElement("audio");
-        autoPlayAudioElement.style.display = "none";
-        document.body.appendChild(autoPlayAudioElement);
+        if (player) {
+          try { player.disconnect(); } catch (_) {}
+        }
 
-        autoPlayAudioElement.pause = function () {
-          // Do nothing! Keeps the iOS background audio session alive
-        };
-
-        player = new SendspinPlayer({
+        var name = localStorage.getItem(STORAGE_NAME) || "HA Browser";
+        var p = new SdkClass({
           baseUrl: serverUrl,
-          playerId,
-          clientName: clientName,
-          audioElement: autoPlayAudioElement,
+          playerId: playerId,
+          clientName: name,
+          audioElement: audioEl,
           deviceInfo: {
             manufacturer: "Home Assistant",
             product_name: "Sendspin Dash",
-            software_version: "1.0.0"
+            software_version: "1.0.0",
           },
           onDisconnected: function () {
-            // When the server drops us, null the player so the
-            // next poll cycle creates a fresh connection.
-            player = null;
+            window.sendspinPlayer = null;
           },
         });
-        await player.connect();
 
-        // --- SPEC WORKAROUNDS ---
+        await p.connect();
 
-        // 1. Group Volume Algorithm Infinite Loop Prevention
-        // The spec's group volume calculation splits "lost delta" equally. Fractional 
-        // volume values can cause an infinite loop during grouping in some servers.
-        // We enforce strict integer rounding before sending volume updates.
-        const originalSetVolume = player.setVolume.bind(player);
-        player.setVolume = function (volume) {
-          originalSetVolume(Math.round(volume));
+        // --- Spec workarounds ---
+
+        // Group volume: enforce integer rounding to prevent infinite loops
+        var origVol = p.setVolume.bind(p);
+        p.setVolume = function (v) { origVol(Math.round(v)); };
+
+        // TCP half-close: force-close the WebSocket if disconnect hangs
+        var origDc = p.disconnect.bind(p);
+        p.disconnect = function (reason) {
+          origDc(reason);
+          try {
+            if (p.wsManager && p.wsManager.ws) p.wsManager.ws.close();
+          } catch (_) {}
         };
 
-        // 2. TCP Half-Close / TIME_WAIT Prevention
-        // The spec dictates that after sending client/goodbye, the server should 
-        // close the connection. However, if the server drops offline or hangs, 
-        // the client connection can stay in an indefinite half-open state.
-        const originalDisconnect = player.disconnect.bind(player);
-        player.disconnect = function (reason) {
-          originalDisconnect(reason);
-          // Force close the underlying WebSocket immediately to avoid hanging
-          if (player.wsManager && player.wsManager.ws) {
-            try { player.wsManager.ws.close(); } catch (_) { }
-          }
-        };
-
-        window.addEventListener("beforeunload", function () {
-          try { if (player) player.disconnect(); } catch (_) { }
-        });
+        player = p;
+        window.sendspinPlayer = p;
       } catch (_) {
         player = null;
+        window.sendspinPlayer = null;
       } finally {
-        isConnecting = false;
+        connecting = false;
       }
-    };
+    }
 
-    // Use navigator.locks so only one tab holds the Sendspin SDK connection
-    const startSdkConnection = () => {
-      connectPlayer();
-      setInterval(connectPlayer, 5000);
-    };
+    window.addEventListener("beforeunload", function () {
+      try { if (player) player.disconnect(); } catch (_) {}
+    });
 
-    // We removed navigator.locks because in a Single Page Application (SPA) like 
-    // Home Assistant, or when users open multiple tabs, it caused a deadlock. 
-    // The previous execution context held the lock forever, leaving new tabs 
-    // or re-evaluating scripts hanging indefinitely. Now, we unconditionally connect.
-    startSdkConnection();
+    tick();
+    setInterval(tick, 5000);
   }
 
   run();

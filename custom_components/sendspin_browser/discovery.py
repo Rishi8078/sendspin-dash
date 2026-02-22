@@ -33,7 +33,6 @@ def _service_info_to_server_entry(service: AsyncServiceInfo) -> dict[str, Any] |
     addresses = service.ip_addresses_by_version(IPVersion.All)
     if not addresses:
         return None
-    # Prefer first non-link-local if available
     host = None
     for addr in addresses:
         if not addr.is_link_local and not addr.is_unspecified:
@@ -47,6 +46,15 @@ def _service_info_to_server_entry(service: AsyncServiceInfo) -> dict[str, Any] |
     if not name:
         name = url
     return {"name": name, "url": url}
+
+
+def _get_merged_options(hass: HomeAssistant) -> dict:
+    """Merge entry.data and entry.options (options win) for the first config entry."""
+    entries = hass.config_entries.async_entries(DOMAIN)
+    if not entries:
+        return {}
+    entry = entries[0]
+    return {**(entry.data or {}), **(entry.options or {})}
 
 
 class SendspinDiscoveryView(HomeAssistantView):
@@ -99,51 +107,48 @@ class SendspinDiscoveryView(HomeAssistantView):
 
 
 class SendspinConfigView(HomeAssistantView):
-    """API view to get integration options (server_url) for connector and panel."""
+    """HTTP fallback for integration config. Connector uses WebSocket instead."""
 
     url = f"{STATIC_URL_PREFIX}/config"
     name = f"api:{DOMAIN}:config"
-    requires_auth = False
+    requires_auth = True
 
     async def get(self, request):
         """Return JSON { server_url, entry_id } from the first config entry."""
         hass: HomeAssistant = request.app["hass"]
+        opts = _get_merged_options(hass)
         entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            return self.json({"server_url": "", "entry_id": None})
-        entry = entries[0]
-        opts = entry.options or {}
+
         ma_url = (opts.get(CONF_MA_URL) or "").strip() or DEFAULT_MA_URL
-        
-        # The frontend SDK needs the Sendspin server (port 8927)
-        server_url = ma_url.replace(":8095", ":8927") if ma_url else "http://192.168.0.109:8927"
-        
+        server_url = ""
+        if ma_url:
+            server_url = ma_url.replace(":8095", ":8927") if ":8095" in ma_url else ma_url
+
         return self.json({
             "server_url": server_url,
             "ma_url": ma_url,
             "ma_token": (opts.get(CONF_MA_TOKEN) or "").strip(),
-            "entry_id": entry.entry_id,
+            "entry_id": entries[0].entry_id if entries else None,
         })
 
 
 class SendspinPlayersView(HomeAssistantView):
-    """API view to proxy player data from Music Assistant because of browser CORS restrictions."""
+    """Proxy player data from Music Assistant (avoids browser CORS restrictions)."""
 
     url = f"{STATIC_URL_PREFIX}/players"
     name = f"api:{DOMAIN}:players"
-    requires_auth = False
+    requires_auth = True
 
     async def get(self, request):
         """Fetch all players from Music Assistant API and return the raw JSON."""
         hass: HomeAssistant = request.app["hass"]
-        entries = hass.config_entries.async_entries(DOMAIN)
-        if not entries:
-            return self.json([])
+        opts = _get_merged_options(hass)
 
-        entry = entries[0]
-        opts = entry.options or {}
         ma_url = (opts.get(CONF_MA_URL) or "").strip() or DEFAULT_MA_URL
         token = (opts.get(CONF_MA_TOKEN) or "").strip()
+
+        if not ma_url:
+            return self.json([])
 
         session = async_get_clientsession(hass)
         headers = {"Content-Type": "application/json"}
@@ -164,5 +169,3 @@ class SendspinPlayersView(HomeAssistantView):
         except Exception as e:
             _LOGGER.error("Failed to fetch players from MA: %s", e)
             return self.json({"error": str(e)}, status=500)
-
-
