@@ -2,6 +2,7 @@
  * Sendspin connector — runs on every HA page (loaded via add_extra_js_url).
  * Uses the locally bundled sendspin-js SDK. Exposes state on window.sendspinState
  * and the player instance on window.sendspinPlayer.
+ * Reports status to the HA backend registry via WebSocket heartbeats.
  */
 (async function () {
   if (window.__sendspinConnectorActive) return;
@@ -25,7 +26,6 @@
     }
   }
 
-  // Shared state object — the panel reads from this
   window.sendspinState = {
     connected: false,
     isPlaying: false,
@@ -42,7 +42,6 @@
 
   if (location.pathname.startsWith("/auth")) return;
 
-  // Wait for HA's hass object to be available
   var hass = null;
   for (var i = 0; i < 120; i++) {
     try {
@@ -53,7 +52,6 @@
   }
   if (!hass) return;
 
-  // Get server URL via HA WebSocket
   var serverUrl = "";
   try {
     var cfg = await hass.callWS({ type: "sendspin_browser/config" });
@@ -61,7 +59,6 @@
   } catch (_) {}
   if (!serverUrl) return;
 
-  // Ensure http(s) prefix
   if (!serverUrl.startsWith("http://") && !serverUrl.startsWith("https://"))
     serverUrl = "http://" + serverUrl;
 
@@ -69,8 +66,8 @@
   var player = null;
   var connecting = false;
   var SendspinPlayer = null;
+  var wasRegistered = false;
 
-  // Load the locally bundled SDK (served as a static file by HA)
   try {
     var sdk = await import("/api/sendspin_browser/sendspin-sdk.js");
     SendspinPlayer = sdk.SendspinPlayer;
@@ -101,8 +98,45 @@
     }
   }
 
+  function sendHeartbeat() {
+    try {
+      hass.callWS({
+        type: "sendspin_browser/heartbeat",
+        player_id: playerId,
+        connected: !!(player && player.isConnected),
+      }).catch(function () {});
+    } catch (_) {}
+  }
+
+  function registerWithBackend() {
+    try {
+      hass.callWS({
+        type: "sendspin_browser/register_player",
+        player_id: playerId,
+        name: localStorage.getItem(STORAGE_NAME) || "HA Browser",
+        user_agent: navigator.userAgent || "",
+      }).catch(function () {});
+    } catch (_) {}
+  }
+
+  function unregisterFromBackend() {
+    try {
+      hass.callWS({
+        type: "sendspin_browser/unregister_player",
+        player_id: playerId,
+      }).catch(function () {});
+    } catch (_) {}
+  }
+
   async function tick() {
     var registered = localStorage.getItem(STORAGE_REGISTERED) === "true";
+
+    if (registered && !wasRegistered) {
+      registerWithBackend();
+    } else if (!registered && wasRegistered) {
+      unregisterFromBackend();
+    }
+    wasRegistered = registered;
 
     if (!registered) {
       if (player) {
@@ -114,6 +148,8 @@
       window.sendspinState.isPlaying = false;
       return;
     }
+
+    sendHeartbeat();
 
     if (player && player.isConnected) {
       window.sendspinPlayer = player;
@@ -143,6 +179,7 @@
       await player.connect();
       window.sendspinPlayer = player;
       window.sendspinState.connected = true;
+      sendHeartbeat();
     } catch (_) {
       player = null;
       window.sendspinPlayer = null;
@@ -155,6 +192,11 @@
   window.addEventListener("beforeunload", function () {
     try { if (player) player.disconnect("shutdown"); } catch (_) {}
   });
+
+  if (localStorage.getItem(STORAGE_REGISTERED) === "true") {
+    wasRegistered = true;
+    registerWithBackend();
+  }
 
   tick();
   setInterval(tick, 5000);
