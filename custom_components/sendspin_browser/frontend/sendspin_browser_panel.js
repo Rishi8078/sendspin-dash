@@ -279,10 +279,10 @@ class SendspinBrowserPanel extends LitElement {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
         cursor: pointer;
         transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s;
         opacity: 0.8;
+        --mdc-icon-size: 28px;
       }
       
       .ctrl-btn:hover {
@@ -299,9 +299,9 @@ class SendspinBrowserPanel extends LitElement {
         height: 72px;
         background: var(--primary-color, #03a9f4);
         color: #fff;
-        font-size: 2rem;
         opacity: 1;
         box-shadow: 0 8px 24px rgba(var(--rgb-primary-color, 3, 169, 244), 0.3);
+        --mdc-icon-size: 44px;
       }
       
       .ctrl-btn.play-pause:hover {
@@ -559,15 +559,23 @@ class SendspinBrowserPanel extends LitElement {
             </div>
 
             <div class="controls" style="opacity: ${connected ? '1' : '0.3'}; pointer-events: ${connected ? 'auto' : 'none'}">
-              <button class="ctrl-btn" title="Stop" @click=${() => this._cmd("stop")}>\u25A0</button>
-              <button class="ctrl-btn" title="Previous" @click=${() => this._cmd("previous")}>\u23EE</button>
-              
-              <button class="ctrl-btn play-pause" title="${isPlaying ? 'Pause' : 'Play'}" @click=${() => this._cmd(isPlaying ? "pause" : "play")}>
-                ${isPlaying ? html`\u23F8` : html`\u25B6`}
+              <button class="ctrl-btn" title="Stop" @click=${() => this._cmd("stop")}>
+                <ha-icon icon="mdi:stop"></ha-icon>
+              </button>
+              <button class="ctrl-btn" title="Previous" @click=${() => this._cmd("previous")}>
+                <ha-icon icon="mdi:skip-previous"></ha-icon>
               </button>
               
-              <button class="ctrl-btn" title="Next" @click=${() => this._cmd("next")}>\u23ED</button>
-              <button class="ctrl-btn" title="Options" style="opacity: 0.5" disabled>\u22EE</button>
+              <button class="ctrl-btn play-pause" title="${isPlaying ? 'Pause' : 'Play'}" @click=${() => this._cmd(isPlaying ? "pause" : "play")}>
+                ${isPlaying ? html`<ha-icon icon="mdi:pause"></ha-icon>` : html`<ha-icon icon="mdi:play"></ha-icon>`}
+              </button>
+              
+              <button class="ctrl-btn" title="Next" @click=${() => this._cmd("next")}>
+                <ha-icon icon="mdi:skip-next"></ha-icon>
+              </button>
+              <button class="ctrl-btn" title="Options" style="opacity: 0.5" disabled>
+                <ha-icon icon="mdi:dots-vertical"></ha-icon>
+              </button>
             </div>
           </div>
 
